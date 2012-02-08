@@ -69,7 +69,7 @@ Mat_<double> IterativeLinearLSTriangulation(Point3d u,	//homogenous image point 
 	Mat_<double> X(4,1); 
 	for (int i=0; i<10; i++) { //Hartley suggests 10 iterations at most
 		Mat_<double> X_ = LinearLSTriangulation(u,P,u1,P1);
-		X(0) = X_(0); X(1) = X_(1); X(2) = X_(2); X_(3) = 1.0;
+		X(0) = X_(0); X(1) = X_(1); X(2) = X_(2); X(3) = 1.0;
 		
 		//recalculate weights
 		double p2x = Mat_<double>(Mat_<double>(P).row(2)*X)(0);
@@ -94,7 +94,7 @@ Mat_<double> IterativeLinearLSTriangulation(Point3d u,	//homogenous image point 
 						  );
 		
 		solve(A,B,X_,DECOMP_SVD);
-		X(0) = X_(0); X(1) = X_(1); X(2) = X_(2); X_(3) = 1.0;
+		X(0) = X_(0); X(1) = X_(1); X(2) = X_(2); X(3) = 1.0;
 	}
 	return X;
 }

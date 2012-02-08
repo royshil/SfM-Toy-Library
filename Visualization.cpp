@@ -53,8 +53,8 @@ void viewerOneOff (pcl::visualization::PCLVisualizer& viewer)
 	viewer.setBackgroundColor(255,255,255);
 	viewer.removeCoordinateSystem();
 	
-	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color(floorcloud, 0, 255, 0); 
-	viewer.addPointCloud(floorcloud,single_color,"floor");
+//	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color(floorcloud, 0, 255, 0); 
+//	viewer.addPointCloud(floorcloud,single_color,"floor");
 	
 	//	cloud_no_floor.reset(new pcl::PointCloud<pcl::PointXYZRGB>);
 	//	pcl::ExtractIndices<pcl::PointXYZRGB> extract;
@@ -69,27 +69,27 @@ void viewerOneOff (pcl::visualization::PCLVisualizer& viewer)
 	
 	//	viewer.addPointCloudNormals<pcl::PointXYZRGB, pcl::Normal >(cloud,mls_normals,10,0.08);
 	
-	using namespace Eigen;
-	
-	for (int c=1; c<2; c++) {
-		VectorXf coeffs_ = coeffs[c];
-		Vector3f n(coeffs_[0],coeffs_[1],coeffs_[2]);
-		Vector3f onplane1 = n.cross(Vector3f::UnitX()).normalized();
-		Vector3f onplane2 = n.cross(onplane1).normalized();		
-		
-		//draw a grid for the floor plane
-		for(int i=0;i<26;i++) {
-			Vector3f p1 = n * -coeffs_[3] + onplane1 * 2.0 * (double)(i-9)/20.0;
-			Vector3f p2 = p1 + onplane2 * 2.5;
-			stringstream ss; ss<<"line"<<c<<i;
-			viewer.addLine<pcl::PointXYZ,pcl::PointXYZ>(pclp3(p1),pclp3(p2),1.0,1.0*c,0,ss.str());
-			
-			p1 = n * -coeffs_[3] + onplane1 * 2.0 * (double)(-9)/20.0 + onplane2 * 2.0 * (double)(i)/20.0;
-			p2 = p1 + onplane1 * 2.5;
-			ss<<"opp";
-			viewer.addLine<pcl::PointXYZ,pcl::PointXYZ>(pclp3(p1),pclp3(p2),1.0,1.0*c,0,ss.str());		
-		}
-	}
+//	using namespace Eigen;
+//	
+//	for (int c=1; c<2; c++) {
+//		VectorXf coeffs_ = coeffs[c];
+//		Vector3f n(coeffs_[0],coeffs_[1],coeffs_[2]);
+//		Vector3f onplane1 = n.cross(Vector3f::UnitX()).normalized();
+//		Vector3f onplane2 = n.cross(onplane1).normalized();		
+//		
+//		//draw a grid for the floor plane
+//		for(int i=0;i<26;i++) {
+//			Vector3f p1 = n * -coeffs_[3] + onplane1 * 2.0 * (double)(i-9)/20.0;
+//			Vector3f p2 = p1 + onplane2 * 2.5;
+//			stringstream ss; ss<<"line"<<c<<i;
+//			viewer.addLine<pcl::PointXYZ,pcl::PointXYZ>(pclp3(p1),pclp3(p2),1.0,1.0*c,0,ss.str());
+//			
+//			p1 = n * -coeffs_[3] + onplane1 * 2.0 * (double)(-9)/20.0 + onplane2 * 2.0 * (double)(i)/20.0;
+//			p2 = p1 + onplane1 * 2.5;
+//			ss<<"opp";
+//			viewer.addLine<pcl::PointXYZ,pcl::PointXYZ>(pclp3(p1),pclp3(p2),1.0,1.0*c,0,ss.str());		
+//		}
+//	}
 }
 
 void SORFilter() {
@@ -141,7 +141,7 @@ void RunVisualization(const vector<cv::Point3d>& pointcloud,
 	PopulatePCLPointCloud(pointcloud,img_1_orig,img_2_orig,correspImg1Pt);
 	SORFilter();
 	FindNormalsMLS();
-	FindFloorPlaneRANSAC();
+//	FindFloorPlaneRANSAC();
 	
 	//	pcl::PointCloud<pcl::PointXYZRGB>::Ptr final (new pcl::PointCloud<pcl::PointXYZRGB>);
 	//	pcl::copyPointCloud<pcl::PointXYZRGB>(*cloud, inliers, *final);
