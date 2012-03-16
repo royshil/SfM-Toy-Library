@@ -73,3 +73,11 @@ target_link_libraries(SfMToyUI
 IF(APPLE)
 	target_link_libraries(SfMToyUI ${COCOA_LIBS})
 ENDIF(APPLE)
+
+
+add_executable(TestStuff
+	DrawKeypoints.cpp
+	)
+target_link_libraries(TestStuff
+	${OpenCV_LIBS}
+	)
