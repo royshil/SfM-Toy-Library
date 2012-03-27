@@ -43,16 +43,15 @@ include_directories(${FLTK_INCLUDE_DIR})
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
 
 # Core functions of SfM
-add_library(SfMToyLibrary 
-	Distance.cpp 
-	Distance.h
-	Triangulation.cpp 
-	Triangulation.h
-	FeatureMatching.cpp
-	FeatureMatching.h
-	FindCameraMatrices.cpp
-	FindCameraMatrices.h
+file(GLOB SFM_LIB_SOURCES	
+	Distance.* 
+	Triangulation.* 
+	FeatureMatching.*
+	FindCameraMatrices.*
+	MultiCameraDistance.*
 )
+
+add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )
 
 # GUI part
 add_executable(SfMToyUI 
