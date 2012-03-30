@@ -53,14 +53,16 @@ public:
 	void OnlyMatchFeatures(int strategy = STRATEGY_USE_OPTICAL_FLOW + STRATEGY_USE_DENSE_OF + STRATEGY_USE_FEATURE_MATCH) 
 	{
 		//TODO pair-wise feature matching
-		for (int frame_num; frame_num < imgs.size(); frame_num++) {
-//		MatchFeatures(left_im, left_im_orig, 
-//					  right_im, right_im_orig,
-//					  imgpts1,
-//					  imgpts2,
-//					  fullpts1,
-//					  fullpts2,
-//					  strategy);
+		for (int frame_num_i = 0; frame_num_i < imgs.size() - 1; frame_num_i++) {
+			for (int frame_num_j = frame_num_i + 1; frame_num_j < imgs.size(); frame_num_j++) {				
+				MatchFeatures(left_im, left_im_orig, 
+							  right_im, right_im_orig,
+							  imgpts1,
+							  imgpts2,
+							  fullpts1,
+							  fullpts2,
+							  strategy);
+			}
 		}
 		
 		features_matched = true;
