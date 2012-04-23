@@ -10,6 +10,7 @@
 #pragma once
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
 #ifdef __SFM__DEBUG__
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -35,10 +36,10 @@ cv::Mat_<double> IterativeLinearLSTriangulation(cv::Point3d u,	//homogenous imag
 											cv::Matx34d P1			//camera 2 matrix
 											);
 
-void TriangulatePoints(const std::vector<cv::Point2d>& pt_set1, 
-					   const std::vector<cv::Point2d>& pt_set2, 
+double TriangulatePoints(const std::vector<cv::KeyPoint>& pt_set1, 
+					   const std::vector<cv::KeyPoint>& pt_set2, 
 					   const cv::Mat& Kinv,
 					   const cv::Matx34d& P,
 					   const cv::Matx34d& P1,
 					   std::vector<cv::Point3d>& pointcloud,
-					   std::vector<cv::Point>& correspImg1Pt);
+					   std::vector<cv::KeyPoint>& correspImg1Pt);

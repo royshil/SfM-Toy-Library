@@ -7,18 +7,21 @@
  *
  */
 
+#pragma once
+
 #include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
 #include <vector>
 
-#define STRATEGY_USE_OPTICAL_FLOW		1
-#define STRATEGY_USE_DENSE_OF			2
-#define STRATEGY_USE_FEATURE_MATCH		4
-#define STRATEGY_USE_HORIZ_DISPARITY	8
+#include "IDistance.h"
 
 void MatchFeatures(const cv::Mat& img_1, const cv::Mat& img_1_orig, 
 				   const cv::Mat& img_2, const cv::Mat& img_2_orig,
-				   std::vector<cv::Point2d>& imgpts1,
-				   std::vector<cv::Point2d>& imgpts2,
-				   std::vector<cv::Point2d>& fullpts1,
-				   std::vector<cv::Point2d>& fullpts2,
-				   int stretegy = STRATEGY_USE_OPTICAL_FLOW + STRATEGY_USE_DENSE_OF + STRATEGY_USE_FEATURE_MATCH);
+				   const std::vector<cv::KeyPoint>& imgpts1,
+				   const std::vector<cv::KeyPoint>& imgpts2,
+				   const cv::Mat& descriptors_1, 
+				   const cv::Mat& descriptors_2,
+				   std::vector<cv::KeyPoint>& fullpts1,
+				   std::vector<cv::KeyPoint>& fullpts2,
+				   int stretegy = STRATEGY_USE_OPTICAL_FLOW + STRATEGY_USE_DENSE_OF + STRATEGY_USE_FEATURE_MATCH,
+				   std::vector<cv::DMatch>* matches = NULL);

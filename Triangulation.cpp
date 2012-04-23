@@ -14,6 +14,8 @@
 using namespace std;
 using namespace cv;
 
+#undef __SFM__DEBUG__
+
 
 /**
  From "Triangulation", Hartley, R.I. and Sturm, P., Computer vision and image understanding, 1997
@@ -46,16 +48,18 @@ Mat_<double> LinearLSTriangulation(Point3d u,		//homogenous image point (u,v,1)
 			  u1.x*P1(2,0)-P1(0,0), u1.x*P1(2,1)-P1(0,1),	u1.x*P1(2,2)-P1(0,2),	
 			  u1.y*P1(2,0)-P1(1,0), u1.y*P1(2,1)-P1(1,1),	u1.y*P1(2,2)-P1(1,2)
 			  );
-	Mat_<double> B = (Mat_<double>(4,1) <<	-(u.x*P(2,3)	-P(0,3)),
-					  -(u.y*P(2,3)	-P(1,3)),
-					  -(u1.x*P1(2,3)	-P1(0,3)),
-					  -(u1.y*P1(2,3)	-P1(1,3)));
+	Matx41d B(-(u.x*P(2,3)	-P(0,3)),
+											  -(u.y*P(2,3)	-P(1,3)),
+											  -(u1.x*P1(2,3)	-P1(0,3)),
+											  -(u1.y*P1(2,3)	-P1(1,3)));
 	
 	Mat_<double> X;
 	solve(A,B,X,DECOMP_SVD);
 	
 	return X;
 }
+
+
 
 /**
  From "Triangulation", Hartley, R.I. and Sturm, P., Computer vision and image understanding, 1997
@@ -87,10 +91,10 @@ Mat_<double> IterativeLinearLSTriangulation(Point3d u,	//homogenous image point 
 				  (u1.x*P1(2,0)-P1(0,0))/wi1,	(u1.x*P1(2,1)-P1(0,1))/wi1,		(u1.x*P1(2,2)-P1(0,2))/wi1,	
 				  (u1.y*P1(2,0)-P1(1,0))/wi1,	(u1.y*P1(2,1)-P1(1,1))/wi1,		(u1.y*P1(2,2)-P1(1,2))/wi1
 				  );
-		Mat_<double> B = (Mat_<double>(4,1) <<	-(u.x*P(2,3)	-P(0,3))/wi,
-						  -(u.y*P(2,3)	-P(1,3))/wi,
-						  -(u1.x*P1(2,3)	-P1(0,3))/wi1,
-						  -(u1.y*P1(2,3)	-P1(1,3))/wi1
+		Mat_<double> B = (Mat_<double>(4,1) <<	  -(u.x*P(2,3)	-P(0,3))/wi,
+												  -(u.y*P(2,3)	-P(1,3))/wi,
+												  -(u1.x*P1(2,3)	-P1(0,3))/wi1,
+												  -(u1.y*P1(2,3)	-P1(1,3))/wi1
 						  );
 		
 		solve(A,B,X_,DECOMP_SVD);
@@ -100,13 +104,13 @@ Mat_<double> IterativeLinearLSTriangulation(Point3d u,	//homogenous image point 
 }
 
 //Triagulate points
-void TriangulatePoints(const vector<Point2d>& pt_set1, 
-					   const vector<Point2d>& pt_set2, 
+double TriangulatePoints(const vector<KeyPoint>& pt_set1, 
+					   const vector<KeyPoint>& pt_set2, 
 					   const Mat& Kinv,
 					   const Matx34d& P,
 					   const Matx34d& P1,
 					   vector<Point3d>& pointcloud,
-					   vector<Point>& correspImg1Pt)
+					   vector<KeyPoint>& correspImg1Pt)
 {
 #ifdef __SFM__DEBUG__
 	vector<double> depths;
@@ -115,23 +119,42 @@ void TriangulatePoints(const vector<Point2d>& pt_set1,
 	pointcloud.clear();
 	correspImg1Pt.clear();
 	
+	Matx44d P1_(P1(0,0),P1(0,1),P1(0,2),P1(0,3),
+				P1(1,0),P1(1,1),P1(1,2),P1(1,3),
+				P1(2,0),P1(2,1),P1(2,2),P1(2,3),
+				0,		0,		0,		1);
+	Matx44d P1inv(P1_.inv());
+	Mat_<double> K = Kinv.inv();
+	
 	cout << "Triangulating...";
 	double t = getTickCount();
+	vector<double> reproj_error;
 	unsigned int pts_size = pt_set1.size();
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (unsigned int i=0; i<pts_size; i++) {
-		Point2f kp = pt_set1[i]; 
+		Point2f kp = pt_set1[i].pt; 
 		Point3d u(kp.x,kp.y,1.0);
 		Mat_<double> um = Kinv * Mat_<double>(u); 
 		u = um.at<Point3d>(0);
-		Point2f kp1 = pt_set2[i]; 
+		Point2f kp1 = pt_set2[i].pt; 
 		Point3d u1(kp1.x,kp1.y,1.0);
 		Mat_<double> um1 = Kinv * Mat_<double>(u1); 
 		u1 = um1.at<Point3d>(0);
 		
 		Mat_<double> X = IterativeLinearLSTriangulation(u,P,u1,P1);
 		
-//		if(X(2) > 6 || X(2) < 0) continue;
+//		cout << "3D Point: " << X << endl;
+//		Mat_<double> x = Mat(P1) * X;
+//		cout <<	"P1 * Point: " << x << endl;
+//		Mat_<double> xPt = (Mat_<double>(3,1) << x(0),x(1),x(2));
+//		cout <<	"Point: " << xPt << endl;
+		Mat_<double> xPt_img = K * Mat(P1) * X;
+//		cout <<	"Point * K: " << xPt_img << endl;
+		Point2f xPt_img_(xPt_img(0)/xPt_img(2),xPt_img(1)/xPt_img(2));
+//		cout << "Image point: " << xPt_img_ << endl;
+		reproj_error.push_back(norm(xPt_img_-kp1));
+		
+//		if(/*X(2) > 6 || */X(2) < 0) continue;
 		
 #pragma omp critical
 		{
@@ -150,10 +173,10 @@ void TriangulatePoints(const vector<Point2d>& pt_set1,
 	{
 		double minVal,maxVal;
 		minMaxLoc(depths, &minVal, &maxVal);
-		Mat tmp(240,320,CV_8UC3); //cvtColor(img_1_orig, tmp, CV_BGR2HSV);
+		Mat tmp(240,320,CV_8UC3,Scalar(0,0,0)); //cvtColor(img_1_orig, tmp, CV_BGR2HSV);
 		for (unsigned int i=0; i<pointcloud.size(); i++) {
 			double _d = MAX(MIN((pointcloud[i].z-minVal)/(maxVal-minVal),1.0),0.0);
-			circle(tmp, correspImg1Pt[i], 1, Scalar(255 * (1.0-(_d)),255,255), CV_FILLED);
+			circle(tmp, correspImg1Pt[i].pt, 1, Scalar(255 * (1.0-(_d)),255,255), CV_FILLED);
 		}
 		cvtColor(tmp, tmp, CV_HSV2BGR);
 		imshow("Depth Map", tmp);
@@ -161,4 +184,6 @@ void TriangulatePoints(const vector<Point2d>& pt_set1,
 		destroyWindow("Depth Map");
 	}	
 #endif
+	Scalar mse = mean(reproj_error);
+	return mse[0];
 }

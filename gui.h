@@ -13,6 +13,7 @@ extern void vizcb(fltk3::Button*, void*);
 extern void mndcb(fltk3::Button*, void*);
 #include <fltk3/Box.h>
 #include <fltk3/CheckButton.h>
+extern void openmulti(fltk3::Button*, void*);
 
 class UserInterface : public fltk3::Group {
 public:

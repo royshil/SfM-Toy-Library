@@ -10,18 +10,22 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
+#include "IDistance.h"
 #include "Triangulation.h"
 #include "FeatureMatching.h"
 #include "FindCameraMatrices.h"
 
-class Distance {
+class Distance : public IDistance {
 private:
-	std::vector<cv::Point2d> imgpts1,
+	std::vector<cv::KeyPoint> imgpts1,
 							imgpts2,
 							fullpts1,
 							fullpts2,
 							imgpts1_good,
 							imgpts2_good;
+	cv::Mat descriptors_1; 
+	cv::Mat descriptors_2;
+	
 	cv::Mat left_im,
 			left_im_orig,
 			right_im,
@@ -33,15 +37,15 @@ private:
 	cv::Mat cam_matrix,distortion_coeff;
 	
 	std::vector<cv::Point3d> pointcloud;
-	std::vector<cv::Point> correspImg1Pt;
+	std::vector<cv::KeyPoint> correspImg1Pt;
 	
 	bool features_matched;
 public:
-	const std::vector<cv::Point3d>& getpointcloud() { return pointcloud; }
+	const std::vector<cv::Point3d>& getPointCloud() { return pointcloud; }
 	const cv::Mat& getleft_im_orig() { return left_im_orig; }
 	const cv::Mat& getright_im_orig() { return right_im_orig; }
-	const std::vector<cv::Point>& getcorrespImg1Pt() { return correspImg1Pt; }
-	
+	const std::vector<cv::KeyPoint>& getcorrespImg1Pt() { return correspImg1Pt; }
+	const std::vector<cv::Vec3b>& getPointCloudRGB() { return std::vector<cv::Vec3b>();}
 		//c'tor
 	Distance(const cv::Mat& left_im_, const cv::Mat& right_im_):
 		features_matched(false)
@@ -61,7 +65,7 @@ public:
 						 0,0,1,0);
 
 		cv::FileStorage fs;
-		fs.open("../../Calibration/out_camera_data.yml",cv::FileStorage::READ);
+		fs.open("../out_camera_data.yml",cv::FileStorage::READ);
 		fs["camera_matrix"]>>cam_matrix;
 		fs["distortion_coefficients"]>>distortion_coeff;
 
@@ -75,6 +79,8 @@ public:
 					  right_im, right_im_orig,
 					  imgpts1,
 					  imgpts2,
+					  descriptors_1,
+					  descriptors_2,
 					  fullpts1,
 					  fullpts2,
 					  strategy);
@@ -87,7 +93,8 @@ public:
 		if(!features_matched) 
 			OnlyMatchFeatures();
 		
-		FindCameraMatrices(K, Kinv, imgpts1, imgpts2, imgpts1_good, imgpts2_good, P, P1
+		std::vector<cv::DMatch> matches;
+		FindCameraMatrices(K, Kinv, imgpts1, imgpts2, imgpts1_good, imgpts2_good, P, P1, matches
 #ifdef __SFM__DEBUG__
 						   ,left_im,right_im
 #endif
@@ -96,8 +103,8 @@ public:
 		//TODO: if the P1 matrix is far away from identity rotation - the solution is probably invalid...
 		//so use an identity matrix
 		
-		std::vector<cv::Point2d>& pt_set1 = (fullpts1.size()>0) ? fullpts1 : imgpts1_good;
-		std::vector<cv::Point2d>& pt_set2 = (fullpts2.size()>0) ? fullpts2 : imgpts2_good;
+		std::vector<cv::KeyPoint>& pt_set1 = (fullpts1.size()>0) ? fullpts1 : imgpts1_good;
+		std::vector<cv::KeyPoint>& pt_set2 = (fullpts2.size()>0) ? fullpts2 : imgpts2_good;
 		
 #if 0
 		//Use OpenCVs cvCorrectMatches

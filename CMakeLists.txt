@@ -1,7 +1,7 @@
 project(SfMToyExample)
 cmake_minimum_required(VERSION 2.8)
 
-find_package(PCL 1.3 REQUIRED)
+find_package(PCL REQUIRED)
 
 find_package(OpenCV REQUIRED)
 find_package(OpenMP REQUIRED)
@@ -32,7 +32,7 @@ set(FLTK_LIBRARIES fltk3 fltk3gl)
 
 IF(APPLE)
 	set( COCOA_LIBS ${CMAKE_OSX_SYSROOT}/System/Library/Frameworks/Cocoa.framework )
-	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -F/usr/local/lib")
+	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -F/usr/local/lib -L/opt/local/lib")
 ENDIF(APPLE)
 
 include_directories(${PCL_INCLUDE_DIRS})
@@ -78,5 +78,12 @@ add_executable(TestStuff
 	DrawKeypoints.cpp
 	)
 target_link_libraries(TestStuff
+	${OpenCV_LIBS}
+	)
+
+add_executable(TestOpenCVRotations
+	rotations.cpp
+	)
+target_link_libraries(TestOpenCVRotations
 	${OpenCV_LIBS}
 	)

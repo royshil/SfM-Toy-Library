@@ -26,24 +26,27 @@ UserInterface::UserInterface(int X, int Y, int W, int H, const char *L)
   } // fltk3::Button* o
   o->end();
 } // fltk3::Group* o
-{ fltk3::Group* o = new fltk3::Group(95, 45, 198, 115);
+{ fltk3::Group* o = new fltk3::Group(95, 5, 150, 175);
   { new fltk3::Box(95, 45, 115, 25, "Match Startegy");
   } // fltk3::Box* o
-  { feature_match_rb = new fltk3::CheckButton(95, 68, 115, 25, "Feature Match");
+  { feature_match_rb = new fltk3::CheckButton(95, 68, 115, 19, "Feature Match");
     feature_match_rb->down_box(fltk3::DOWN_BOX);
     feature_match_rb->value(1);
   } // fltk3::CheckButton* feature_match_rb
-  { optical_flow_rb = new fltk3::CheckButton(95, 90, 115, 25, "Optical Flow");
+  { optical_flow_rb = new fltk3::CheckButton(95, 87, 115, 24, "Optical Flow");
     optical_flow_rb->down_box(fltk3::DOWN_BOX);
     optical_flow_rb->value(1);
   } // fltk3::CheckButton* optical_flow_rb
-  { dense_of_rb = new fltk3::CheckButton(95, 113, 115, 25, "Dense O-F");
+  { dense_of_rb = new fltk3::CheckButton(95, 109, 115, 22, "Dense O-F");
     dense_of_rb->down_box(fltk3::DOWN_BOX);
     dense_of_rb->value(1);
   } // fltk3::CheckButton* dense_of_rb
-  { horiz_disparity_rb = new fltk3::CheckButton(95, 135, 115, 25, "Horiz. Disparity");
+  { horiz_disparity_rb = new fltk3::CheckButton(95, 130, 115, 20, "Horiz. Disparity");
     horiz_disparity_rb->down_box(fltk3::DOWN_BOX);
   } // fltk3::CheckButton* horiz_disparity_rb
+  { fltk3::Button* o = new fltk3::Button(95, 5, 125, 25, "Open Multi");
+    o->callback((fltk3::Callback*)openmulti);
+  } // fltk3::Button* o
   o->end();
 } // fltk3::Group* o
 { fltk3::Box* o = new fltk3::Box(225, 5, 273, 205, "Left");

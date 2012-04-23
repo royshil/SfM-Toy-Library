@@ -3,7 +3,7 @@ version 3.0000
 header_name {.h} 
 code_name {.cxx}
 widget_class UserInterface {open
-  xywh {469 136 780 215} type Double visible
+  xywh {391 156 780 215} type Double visible
 } {
   {fltk3::Group} {} {open
     xywh {5 5 85 205}
@@ -44,27 +44,32 @@ widget_class UserInterface {open
     }
   }
   {fltk3::Group} {} {open
-    xywh {95 45 198 115}
+    xywh {95 5 150 175}
   } {
     {fltk3::Box} {} {
-      label {Match Startegy} selected
+      label {Match Startegy}
       xywh {95 45 115 25}
     }
     {fltk3::CheckButton} feature_match_rb {
       label {Feature Match}
-      xywh {95 68 115 25} down_box DOWN_BOX value 1
+      xywh {95 68 115 19} down_box DOWN_BOX value 1
     }
     {fltk3::CheckButton} optical_flow_rb {
       label {Optical Flow}
-      xywh {95 90 115 25} down_box DOWN_BOX value 1
+      xywh {95 87 115 24} down_box DOWN_BOX value 1
     }
     {fltk3::CheckButton} dense_of_rb {
       label {Dense O-F}
-      xywh {95 113 115 25} down_box DOWN_BOX value 1
+      xywh {95 109 115 22} down_box DOWN_BOX value 1
     }
     {fltk3::CheckButton} horiz_disparity_rb {
       label {Horiz. Disparity}
-      xywh {95 135 115 25} down_box DOWN_BOX
+      xywh {95 130 115 20} down_box DOWN_BOX
+    }
+    {fltk3::Button} {} {
+      label {Open Multi}
+      callback openmulti selected
+      xywh {95 5 125 25}
     }
   }
   {fltk3::Box} {} {

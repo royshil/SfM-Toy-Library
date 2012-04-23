@@ -9,20 +9,27 @@
 
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <utility>
 
+#include "IDistance.h"
 #include "Triangulation.h"
 #include "FeatureMatching.h"
 #include "FindCameraMatrices.h"
 
-class MultiCameraDistance {	
+
+class MultiCameraDistance  : public IDistance {	
 private:
-	std::vector<std::vector<cv::Point2d> > imgpts;
-	std::vector<std::vector<cv::Point2d> > fullpts;
-	std::vector<std::vector<cv::Point2d> > imgpts1_good;
+	std::vector<std::vector<cv::KeyPoint> > imgpts;
+	std::vector<std::vector<cv::KeyPoint> > fullpts;
+	std::vector<std::vector<cv::KeyPoint> > imgpts_good;
+	std::vector<cv::Mat> descriptors;
 
+	std::map<std::pair<int,int> ,std::vector<cv::DMatch> > matches_matrix;
+	
 	std::vector<cv::Mat> imgs, imgs_orig;
-
-	std::vector<cv::Matx34d> Pmats;
+	const std::vector<std::string> imgs_names;
+	
+	std::map<std::pair<int,int> ,cv::Matx34d> Pmats;
 
 	cv::Mat K;
 	cv::Mat_<double> Kinv;
@@ -30,69 +37,227 @@ private:
 	cv::Mat cam_matrix,distortion_coeff;
 	
 	std::vector<cv::Point3d> pointcloud;
-	std::vector<cv::Point> correspImg1Pt;
+	std::vector<cv::Vec3b> pointCloudRGB;
+	std::vector<cv::KeyPoint> correspImg1Pt;
 	
 	bool features_matched;
 public:
-	const std::vector<cv::Point3d>& getpointcloud() { return pointcloud; }
+	const std::vector<cv::Point3d>& getPointCloud() { return pointcloud; }
 	const cv::Mat& get_im_orig(int frame_num) { return imgs_orig[frame_num]; }
-	const std::vector<cv::Point>& getcorrespImg1Pt() { return correspImg1Pt; }
-	
+	const std::vector<cv::KeyPoint>& getcorrespImg1Pt() { return correspImg1Pt; }
+	const std::vector<cv::Vec3b>& getPointCloudRGB() { return pointCloudRGB; }
 	//c'tor
-	MultiCameraDistance():features_matched(false)
+	MultiCameraDistance(const std::vector<cv::Mat>& imgs_, const std::vector<std::string>& imgs_names_):
+		features_matched(false),
+		imgs_names(imgs_names_)
 	{		
-		cv::FileStorage fs;
-		fs.open("../../Calibration/out_camera_data.yml",cv::FileStorage::READ);
-		fs["camera_matrix"]>>cam_matrix;
-		fs["distortion_coefficients"]>>distortion_coeff;
+		for (unsigned int i=0; i<imgs_.size(); i++) {
+			imgs_orig.push_back(cv::Mat());
+			if (!imgs_[i].empty()) {
+				if (imgs_[i].type() == CV_8UC1) {
+					cvtColor(imgs_[i], imgs_orig[i], CV_GRAY2BGR);
+				} else if (imgs_[i].type() == CV_32FC3 || imgs_[i].type() == CV_64FC3) {
+					imgs_[i].convertTo(imgs_orig[i],CV_8UC1,255.0);
+				} else {
+					imgs_[i].copyTo(imgs_orig[i]);
+				}
+
+			}
+			
+			imgs.push_back(cv::Mat());
+			cvtColor(imgs_orig[i],imgs[i], CV_BGR2GRAY);
+			
+//			imgpts.push_back(std::vector<cv::KeyPoint>());
+//			fullpts.push_back(std::vector<cv::KeyPoint>());
+			imgpts_good.push_back(std::vector<cv::KeyPoint>());
+//			descriptors.push_back(cv::Mat());
+		}
+		
+		cv::SurfFeatureDetector detector( 10 );
+		detector.detect(imgs, imgpts);
+		cv::SiftDescriptorExtractor extractor(48,16,true);
+		extractor.compute(imgs, imgpts, descriptors);
+		
+//		cv::FileStorage fs;
+//		fs.open("../camera.yaml",cv::FileStorage::READ);
+//		fs["camera_matrix"]>>cam_matrix;
+//		fs["distortion_coefficients"]>>distortion_coeff;
+		
+		cv::Size imgs_size = imgs_[0].size();
+		cam_matrix = (cv::Mat_<double>(3,3) << imgs_size.height , 0 , imgs_size.width/2.0,
+												0, imgs_size.height, imgs_size.height/2.0,
+												0, 0, 1);
 		
 		K = cam_matrix;
 		invert(K, Kinv); //get inverse of camera matrix
 	}
 	
-	void OnlyMatchFeatures(int strategy = STRATEGY_USE_OPTICAL_FLOW + STRATEGY_USE_DENSE_OF + STRATEGY_USE_FEATURE_MATCH) 
+	void OnlyMatchFeatures(int strategy = STRATEGY_USE_FEATURE_MATCH) 
 	{
-		//TODO pair-wise feature matching
-		for (int frame_num_i = 0; frame_num_i < imgs.size() - 1; frame_num_i++) {
-			for (int frame_num_j = frame_num_i + 1; frame_num_j < imgs.size(); frame_num_j++) {				
-				MatchFeatures(left_im, left_im_orig, 
-							  right_im, right_im_orig,
-							  imgpts1,
-							  imgpts2,
-							  fullpts1,
-							  fullpts2,
-							  strategy);
+		if(features_matched) return;
+		int loop1_top = imgs.size() - 1, loop2_top = imgs.size();
+		int frame_num_i = 0;
+//#pragma omp parallel for schedule(dynamic)
+		for (frame_num_i = 0; frame_num_i < loop1_top; frame_num_i++) {
+			for (int frame_num_j = frame_num_i + 1; frame_num_j < loop2_top; frame_num_j++)
+			{
+				std::vector<cv::KeyPoint> fp,fp1;
+				std::cout << "------------ Match " << imgs_names[frame_num_i] << ","<<imgs_names[frame_num_j]<<" ------------\n";
+				std::vector<cv::DMatch> matches_tmp;
+				MatchFeatures(imgs[frame_num_i], imgs_orig[frame_num_i], 
+							  imgs[frame_num_j], imgs_orig[frame_num_j],
+							  imgpts[frame_num_i],
+							  imgpts[frame_num_j],
+							  descriptors[frame_num_i],
+							  descriptors[frame_num_j],
+							  fp,
+							  fp1,
+							  STRATEGY_USE_FEATURE_MATCH,
+							  &matches_tmp);
+				
+//#pragma omp critical
+				{
+					matches_matrix[std::make_pair(frame_num_i,frame_num_j)] = matches_tmp;
+				}
 			}
 		}
-		
 		features_matched = true;
+	}
+	
+	bool CheckCoherentRotation(cv::Mat_<double>& R) {
+		std::cout << "R; " << R << std::endl;
+		double s = cv::norm(R,cv::Mat_<double>::eye(3,3),cv::NORM_L1);
+		std::cout << "Distance from I: " << s << std::endl;
+		if (s > 2.3) { // norm of R from I is large -> probably bad rotation
+			std::cout << "rotation is probably not coherent.." << std::endl;
+			return false;	//skip triangulation
+		}
+		return true;
 	}
 	
 	void RecoverDepthFromImages() {			
 		
 		if(!features_matched) 
 			OnlyMatchFeatures();
-		
-		for (int frame_num; frame_num < imgs.size(); frame_num++) {
-		
-		//TODO: obtain camera matrices from pairwise matches
-//		FindCameraMatrices(K, Kinv, imgpts1, imgpts2, imgpts1_good, imgpts2_good, P, P1
-//#ifdef __SFM__DEBUG__
-//						   ,left_im,right_im
-//#endif
-//						   );
-		
-		//TODO: if the P1 matrix is far away from identity rotation - the solution is probably invalid...
-		//so use an identity matrix
-		
-//		std::vector<cv::Point2d>& pt_set1 = (fullpts1.size()>0) ? fullpts1 : imgpts1_good;
-//		std::vector<cv::Point2d>& pt_set2 = (fullpts2.size()>0) ? fullpts2 : imgpts2_good;
-		
-			
-		//TODO: triangulate points for each pair, and transform to base frame
 
-//		TriangulatePoints(pt_set1, pt_set2, Kinv, P, P1, pointcloud, correspImg1Pt);
-			
+		std::cout << "======================================================================\n";
+		std::cout << "======================================================================\n";
+
+		for (unsigned int frame_num_i = 0; frame_num_i < imgs.size() - 1; frame_num_i++) {
+			for (unsigned int frame_num_j = frame_num_i + 1; frame_num_j < imgs.size(); frame_num_j++) 
+			{				
+				cv::Matx34d P(1,0,0,0,
+							  0,1,0,0,
+							  0,0,1,0);
+				
+				std::cout << "---------------- find Ps: "<<imgs_names[frame_num_i]<<","<<imgs_names[frame_num_j]<<" -----------------\n";
+				//TODO: obtain camera matrices from pairwise matches
+				FindCameraMatrices(K, Kinv, 
+								   imgpts[frame_num_i], 
+								   imgpts[frame_num_j], 
+								   imgpts_good[frame_num_i],
+								   imgpts_good[frame_num_j], 
+								   P, 
+								   Pmats[std::make_pair(frame_num_i, frame_num_j)],
+								   matches_matrix[std::make_pair(frame_num_i, frame_num_j)]
+#ifdef __SFM__DEBUG__
+								   ,imgs[frame_num_i],imgs[frame_num_j]
+#endif
+						   );
+			}
+		}
+
+		std::cout << "======================================================================\n";
+		std::cout << "======================================================================\n";
+		
+		for (
+			 unsigned int frame_num_i = 0; 
+			 frame_num_i < imgs.size() - 1; 
+			 frame_num_i++) 
+		{
+			for (
+				 unsigned int frame_num_j = frame_num_i + 1; 
+				 frame_num_j < imgs.size(); 
+				 frame_num_j++) 
+			{
+				std::cout << "------------ triangulate "<<imgs_names[frame_num_i]<<","<<imgs_names[frame_num_j]<<"-------------\n";
+				
+				//TODO: if the P1 matrix is far away from identity rotation - the solution is probably invalid...
+				//so use an identity matrix
+				cv::Matx34d P1 = Pmats[std::make_pair(frame_num_i, frame_num_j)];
+				cv::Mat_<double> R = (cv::Mat_<double>(3,3) << P1(0,0),P1(0,1),P1(0,2),
+															  P1(1,0),P1(1,1),P1(1,2),
+															  P1(2,0),P1(2,1),P1(2,2));
+				if(!CheckCoherentRotation(R)) {
+					std::cout << " skip triangulation " << std::endl;
+					continue; //skip triangulation 
+				}
+				
+				std::vector<cv::KeyPoint> pt_set1,pt_set2;
+				std::vector<cv::DMatch> matches = matches_matrix[std::make_pair(frame_num_i, frame_num_j)];
+				for (unsigned int i=0; i<matches.size(); i++) {
+					pt_set1.push_back(imgpts[frame_num_i][matches[i].queryIdx]);
+					pt_set2.push_back(imgpts[frame_num_j][matches[i].trainIdx]);
+				}
+				
+				//-- triangulate points for each pair, and transform to base frame
+
+#if 0								
+				//if this is not between some frame and the 1st camera...
+				if (frame_num_i > 0) 
+				{
+					std::cout << "this is not reference frame, find backtrack\n";
+					//get rotation to first camera					
+					cv::Matx34d P1_ref;
+					cv::Mat_<double> R_ref;
+					int reference_frame = 0; //start by trying to reference to origin frame
+					do {
+						std::cout << "Check frame " << reference_frame << "\n";
+						P1_ref = Pmats[std::make_pair(reference_frame++, frame_num_i)];
+						R_ref = (cv::Mat_<double>(3,3) << P1_ref(0,0),P1_ref(0,1),P1_ref(0,2),
+														 P1_ref(1,0),P1_ref(1,1),P1_ref(1,2),
+														 P1_ref(2,0),P1_ref(2,1),P1_ref(2,2));
+					} while (!CheckCoherentRotation(R_ref) && reference_frame < frame_num_i); //see if rotation from the i cam to the reference is bad.
+					reference_frame--; //undo the ++ from before
+					
+					std::cout << "Ps: " << reference_frame << " -> " << frame_num_i << " -> " << frame_num_j << std::endl;
+					
+					R = R_ref * R;
+					cv::Matx31d t(P1(0,3),P1(1,3),P1(2,3));
+					cv::Matx31d t_ref(P1_ref(0,3),P1_ref(1,3),P1_ref(2,3));
+					t = t + t_ref;
+					P1 = cv::Matx34d(R(0,0),R(0,1),R(0,2),t(0),
+									 R(1,0),R(1,1),R(1,2),t(1),
+									 R(2,0),R(2,1),R(2,2),t(2));
+				} 
+#endif
+				R = (cv::Mat_<double>(3,3) << P1(0,0),P1(0,1),P1(0,2),
+					 P1(1,0),P1(1,1),P1(1,2),
+					 P1(2,0),P1(2,1),P1(2,2));
+				if(!CheckCoherentRotation(R)) {
+					std::cout << " skip triangulation " << std::endl;
+					continue; //skip triangulation 
+				}
+				
+				//triangulate
+				std::vector<cv::Point3d> pcloud;
+				correspImg1Pt.clear();
+				cv::Matx34d P(1,0,0,0,
+							  0,1,0,0,
+							  0,0,1,0);				
+				std::cout << "P1 " << cv::Mat(P1) << std::endl;
+				double reproj_error = TriangulatePoints(pt_set1, pt_set2, Kinv, P, P1, pcloud, correspImg1Pt);
+				std::cout << "triangulation reproj error " << reproj_error << std::endl;
+				
+				if (reproj_error < 500.0) {
+					for (unsigned int i=0; i<pcloud.size(); i++) {
+						pointcloud.push_back(pcloud[i]);
+						pointCloudRGB.push_back(imgs_orig[frame_num_i].at<cv::Vec3b>(correspImg1Pt[i].pt));
+					}
+				} else {
+					std::cout << "triangulation mean reproj. error is too high" << std::endl;
+				}
+			}
 		}
 	}
 };

@@ -8,6 +8,7 @@
  */
 
 #include "Distance.h"
+#include "MultiCameraDistance.h"
 #include "DistanceUI.h"
 #include <fltk3/FileChooser.h> 
 #include "Visualization.h"
@@ -15,10 +16,12 @@
 
 cv::Ptr<fltk3::Widget> left_w,right_w;
 cv::Ptr<fltk3::Window> window;
-bool left_loaded,right_loaded,distance_init;
+bool left_loaded,right_loaded,distance_init,dirloaded;
 cv::Mat left_im,right_im;
-cv::Ptr<Distance> distance;
+cv::Ptr<IDistance> distance;
 cv::Ptr<UserInterface> ui;
+std::vector<cv::Mat> images;
+std::vector<std::string> images_names;
 
 bool OpenFileAndLoadWidget(cv::Ptr<fltk3::Widget>& _w, cv::Mat& m) {
 	char* filename = fltk3::file_chooser("Choose a file","","/Users/royshilkrot/Documents/eyering/coop",0);
@@ -38,6 +41,49 @@ bool OpenFileAndLoadWidget(cv::Ptr<fltk3::Widget>& _w, cv::Mat& m) {
 		fltk3::alert("Cannot load image at %s",filename);
 		return false;
 	}
+}
+
+bool hasEnding (std::string const &fullString, std::string const &ending)
+{
+    if (fullString.length() >= ending.length()) {
+        return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+    } else {
+        return false;
+    }
+}
+
+void openmulti(fltk3::Button *, void * matptr) {
+	char* filename = fltk3::dir_chooser("Choose a directory","/Users/royshilkrot/Documents",0);
+	if (filename == NULL) {
+		return;
+	}
+	std::vector<std::string> files_;
+	DIR *dp;
+	struct dirent *ep;     
+	dp = opendir (filename);
+	
+	if (dp != NULL)
+	{
+		while (ep = readdir (dp)) {
+			if (ep->d_name[0] != '.')
+				files_.push_back(ep->d_name);
+		}
+		
+		(void) closedir (dp);
+	}
+	else {
+		std::cerr << ("Couldn't open the directory");
+		return;
+	}
+	for (unsigned int i=0; i<files_.size(); i++) {
+		if (files_[i][0] == '.' || !(hasEnding(files_[i],"jpg")||hasEnding(files_[i],"png"))) {
+			continue;
+		}
+		cv::Mat m_ = cv::imread(std::string(filename) + "/" + files_[i]);
+		images_names.push_back(files_[i]);
+		images.push_back(m_);
+	}
+	dirloaded = true;
 }
 
 void leftcb(fltk3::Button *, void * matptr) {
@@ -64,7 +110,11 @@ void initD() {
 	if (!distance_init && left_loaded && right_loaded) {
 		distance = new Distance(left_im,right_im);
 		distance_init = true;
+	} else if (!distance_init && dirloaded) {
+		distance = new MultiCameraDistance(images,images_names);
+		distance_init = true;
 	}
+
 }
 
 void matchcb(fltk3::Button *, void *) {
@@ -89,7 +139,14 @@ void mndcb(fltk3::Button *, void *) {
 
 void vizcb(fltk3::Button *, void *)
 {
-	RunVisualization(distance->getpointcloud(), distance->getleft_im_orig(), distance->getright_im_orig(), distance->getcorrespImg1Pt());
+	if (left_loaded && right_loaded) {
+		IDistance* d_ = distance;
+		Distance* d_imp = (Distance*)d_;
+		RunVisualization(distance->getPointCloud(), std::vector<cv::Vec3b>(), d_imp->getleft_im_orig(), d_imp->getright_im_orig(), d_imp->getcorrespImg1Pt());
+	} else if(dirloaded) {
+		RunVisualization(distance->getPointCloud(),distance->getPointCloudRGB());
+	}
+
 }
 
 int runUI(int argc, char** argv) {

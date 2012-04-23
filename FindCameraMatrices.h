@@ -6,18 +6,25 @@
  *  Copyright 2011 MIT. All rights reserved.
  *
  */
+#pragma once
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
+
+#undef __SFM__DEBUG__
+
+void KeyPointsToPoints(const std::vector<cv::KeyPoint>& kps, std::vector<cv::Point2f>& ps);
 
 void FindCameraMatrices(const cv::Mat& K, 
 						const cv::Mat& Kinv, 
-						const std::vector<cv::Point2d>& imgpts1,
-						const std::vector<cv::Point2d>& imgpts2,
-						std::vector<cv::Point2d>& imgpts1_good,
-						std::vector<cv::Point2d>& imgpts2_good,
+						const std::vector<cv::KeyPoint>& imgpts1,
+						const std::vector<cv::KeyPoint>& imgpts2,
+						std::vector<cv::KeyPoint>& imgpts1_good,
+						std::vector<cv::KeyPoint>& imgpts2_good,
 						cv::Matx34d& P,
-						cv::Matx34d& P1
+						cv::Matx34d& P1,
+						std::vector<cv::DMatch>& matches
 #ifdef __SFM__DEBUG__
-						,const cv::Mat&, const cv::Mat&
+						,const cv::Mat& = cv::Mat(), const cv::Mat& = cv::Mat()
 #endif
 						);
