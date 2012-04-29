@@ -15,6 +15,8 @@
 
 #include "IDistance.h"
 
+#include "Common.h"
+
 void MatchFeatures(const cv::Mat& img_1, const cv::Mat& img_1_orig, 
 				   const cv::Mat& img_2, const cv::Mat& img_2_orig,
 				   const std::vector<cv::KeyPoint>& imgpts1,

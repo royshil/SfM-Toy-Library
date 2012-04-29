@@ -17,6 +17,8 @@
 #endif
 #include <vector>
 
+#include "Common.h"
+
 /**
  From "Triangulation", Hartley, R.I. and Sturm, P., Computer vision and image understanding, 1997
  */
@@ -41,5 +43,5 @@ double TriangulatePoints(const std::vector<cv::KeyPoint>& pt_set1,
 					   const cv::Mat& Kinv,
 					   const cv::Matx34d& P,
 					   const cv::Matx34d& P1,
-					   std::vector<cv::Point3d>& pointcloud,
+					   std::vector<CloudPoint>& pointcloud,
 					   std::vector<cv::KeyPoint>& correspImg1Pt);

@@ -8,7 +8,7 @@
  */
 
 #include "Distance.h"
-#include "MultiCameraDistance.h"
+#include "MultiCameraPnP.h"
 #include "DistanceUI.h"
 #include <fltk3/FileChooser.h> 
 #include "Visualization.h"
@@ -111,7 +111,7 @@ void initD() {
 		distance = new Distance(left_im,right_im);
 		distance_init = true;
 	} else if (!distance_init && dirloaded) {
-		distance = new MultiCameraDistance(images,images_names);
+		distance = new MultiCameraPnP(images,images_names);
 		distance_init = true;
 	}
 

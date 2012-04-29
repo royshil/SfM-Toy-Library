@@ -18,6 +18,6 @@ class IDistance {
 public:
 	virtual void OnlyMatchFeatures(int strategy = STRATEGY_USE_OPTICAL_FLOW + STRATEGY_USE_DENSE_OF + STRATEGY_USE_FEATURE_MATCH) = 0;
 	virtual void RecoverDepthFromImages() = 0;
-	virtual const std::vector<cv::Point3d>& getPointCloud() = 0;
+	virtual std::vector<cv::Point3d> getPointCloud() = 0;
 	virtual const std::vector<cv::Vec3b>& getPointCloudRGB() = 0;
 };

@@ -49,9 +49,9 @@ Mat_<double> LinearLSTriangulation(Point3d u,		//homogenous image point (u,v,1)
 			  u1.y*P1(2,0)-P1(1,0), u1.y*P1(2,1)-P1(1,1),	u1.y*P1(2,2)-P1(1,2)
 			  );
 	Matx41d B(-(u.x*P(2,3)	-P(0,3)),
-											  -(u.y*P(2,3)	-P(1,3)),
-											  -(u1.x*P1(2,3)	-P1(0,3)),
-											  -(u1.y*P1(2,3)	-P1(1,3)));
+			  -(u.y*P(2,3)	-P(1,3)),
+			  -(u1.x*P1(2,3)	-P1(0,3)),
+			  -(u1.y*P1(2,3)	-P1(1,3)));
 	
 	Mat_<double> X;
 	solve(A,B,X,DECOMP_SVD);
@@ -109,14 +109,14 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 					   const Mat& Kinv,
 					   const Matx34d& P,
 					   const Matx34d& P1,
-					   vector<Point3d>& pointcloud,
+					   vector<CloudPoint>& pointcloud,
 					   vector<KeyPoint>& correspImg1Pt)
 {
 #ifdef __SFM__DEBUG__
 	vector<double> depths;
 #endif
 	
-	pointcloud.clear();
+//	pointcloud.clear();
 	correspImg1Pt.clear();
 	
 	Matx44d P1_(P1(0,0),P1(0,1),P1(0,2),P1(0,3),
@@ -158,13 +158,17 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 		
 #pragma omp critical
 		{
-			pointcloud.push_back(Point3d(X(0),X(1),X(2)));
+			CloudPoint cp; 
+			cp.pt = Point3d(X(0),X(1),X(2));
+			
+			pointcloud.push_back(cp);
 			correspImg1Pt.push_back(pt_set1[i]);
 #ifdef __SFM__DEBUG__
 			depths.push_back(X(2));
 #endif
 		}
 	}
+	
 	t = ((double)getTickCount() - t)/getTickFrequency();
 	cout << "Done. ("<<pointcloud.size()<<"points, " << t <<"s)"<< endl;
 	

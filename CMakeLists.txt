@@ -49,6 +49,9 @@ file(GLOB SFM_LIB_SOURCES
 	FeatureMatching.*
 	FindCameraMatrices.*
 	MultiCameraDistance.*
+	IDistance.*
+	MultiCameraPnP.*
+	Common.*
 )
 
 add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )
@@ -78,6 +81,7 @@ add_executable(TestStuff
 	DrawKeypoints.cpp
 	)
 target_link_libraries(TestStuff
+	SfMToyLibrary
 	${OpenCV_LIBS}
 	)
 

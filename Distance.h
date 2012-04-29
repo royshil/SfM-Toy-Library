@@ -6,10 +6,12 @@
  *  Copyright 2012 MIT. All rights reserved.
  *
  */
+#pragma once
 
 #include <opencv2/opencv.hpp>
 #include <vector>
 
+#include "Common.h"
 #include "IDistance.h"
 #include "Triangulation.h"
 #include "FeatureMatching.h"
@@ -36,12 +38,12 @@ private:
 
 	cv::Mat cam_matrix,distortion_coeff;
 	
-	std::vector<cv::Point3d> pointcloud;
+	std::vector<CloudPoint> pointcloud;
 	std::vector<cv::KeyPoint> correspImg1Pt;
 	
 	bool features_matched;
 public:
-	const std::vector<cv::Point3d>& getPointCloud() { return pointcloud; }
+	std::vector<cv::Point3d> getPointCloud() { return CloudPointsToPoints(pointcloud); }
 	const cv::Mat& getleft_im_orig() { return left_im_orig; }
 	const cv::Mat& getright_im_orig() { return right_im_orig; }
 	const std::vector<cv::KeyPoint>& getcorrespImg1Pt() { return correspImg1Pt; }
@@ -94,7 +96,7 @@ public:
 			OnlyMatchFeatures();
 		
 		std::vector<cv::DMatch> matches;
-		FindCameraMatrices(K, Kinv, imgpts1, imgpts2, imgpts1_good, imgpts2_good, P, P1, matches
+		FindCameraMatrices(K, Kinv, imgpts1, imgpts2, imgpts1_good, imgpts2_good, P, P1, matches, pointcloud
 #ifdef __SFM__DEBUG__
 						   ,left_im,right_im
 #endif
@@ -103,8 +105,8 @@ public:
 		//TODO: if the P1 matrix is far away from identity rotation - the solution is probably invalid...
 		//so use an identity matrix
 		
-		std::vector<cv::KeyPoint>& pt_set1 = (fullpts1.size()>0) ? fullpts1 : imgpts1_good;
-		std::vector<cv::KeyPoint>& pt_set2 = (fullpts2.size()>0) ? fullpts2 : imgpts2_good;
+//		std::vector<cv::KeyPoint>& pt_set1 = (fullpts1.size()>0) ? fullpts1 : imgpts1_good;
+//		std::vector<cv::KeyPoint>& pt_set2 = (fullpts2.size()>0) ? fullpts2 : imgpts2_good;
 		
 #if 0
 		//Use OpenCVs cvCorrectMatches
@@ -127,6 +129,6 @@ public:
 		//	undistortPoints(pt_set2, pt_set2, Mat_<double>::eye(3,3), distortion_coeff);
 		}
 		
-		TriangulatePoints(pt_set1, pt_set2, Kinv, P, P1, pointcloud, correspImg1Pt);
+//		TriangulatePoints(pt_set1, pt_set2, Kinv, P, P1, pointcloud, correspImg1Pt);
 	}
 };
