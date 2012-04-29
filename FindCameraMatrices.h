@@ -15,7 +15,11 @@
 
 #undef __SFM__DEBUG__
 
-void KeyPointsToPoints(const std::vector<cv::KeyPoint>& kps, std::vector<cv::Point2f>& ps);
+cv::Mat GetFundamentalMat(const std::vector<cv::KeyPoint>& imgpts1,
+					   const std::vector<cv::KeyPoint>& imgpts2,
+					   std::vector<cv::KeyPoint>& imgpts1_good,
+					   std::vector<cv::KeyPoint>& imgpts2_good,
+					   std::vector<cv::DMatch>& matches);
 
 void FindCameraMatrices(const cv::Mat& K, 
 						const cv::Mat& Kinv, 

@@ -36,6 +36,85 @@ bool CheckCoherentRotation(cv::Mat_<double>& R) {
 	return true;
 }
 
+Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
+					   const vector<KeyPoint>& imgpts2,
+					   vector<KeyPoint>& imgpts1_good,
+					   vector<KeyPoint>& imgpts2_good,
+					   vector<DMatch>& matches) {
+	//Try to eliminate keypoints based on the fundamental matrix
+	//(although this is not the proper way to do this)
+	vector<uchar> status(imgpts1.size());
+	
+#ifdef __SFM__DEBUG__
+	std::vector< DMatch > good_matches_;
+	std::vector<KeyPoint> keypoints_1, keypoints_2;
+#endif		
+	//	undistortPoints(imgpts1, imgpts1, cam_matrix, distortion_coeff);
+	//	undistortPoints(imgpts2, imgpts2, cam_matrix, distortion_coeff);
+	//
+	imgpts1_good.clear(); imgpts2_good.clear();
+	
+	vector<KeyPoint> imgpts1_tmp;
+	vector<KeyPoint> imgpts2_tmp;
+	if (matches.size() <= 0) {
+		imgpts1_tmp = imgpts1;
+		imgpts2_tmp = imgpts2;
+	} else {
+		GetAlignedPointsFromMatch(imgpts1, imgpts2, matches, imgpts1_tmp, imgpts2_tmp);
+		//			for (unsigned int i=0; i<matches.size(); i++) {
+		//				imgpts1_tmp.push_back(imgpts1[matches[i].queryIdx]);
+		//				imgpts2_tmp.push_back(imgpts2[matches[i].trainIdx]);
+		//			}
+	}
+	
+	Mat F;
+	{
+		vector<Point2f> pts1,pts2;
+		KeyPointsToPoints(imgpts1_tmp, pts1);
+		KeyPointsToPoints(imgpts2_tmp, pts2);
+#ifdef __SFM__DEBUG__
+		cout << "pts1 " << pts1.size() << " (orig pts " << imgpts1_good.size() << ")" << endl;
+		cout << "pts2 " << pts2.size() << " (orig pts " << imgpts2_good.size() << ")" << endl;
+#endif
+		F = findFundamentalMat(pts1, pts2, FM_RANSAC, 3.0, 0.99, status);
+	}
+	
+	vector<DMatch> new_matches;
+	cout << "keeping " << countNonZero(status) << " / " << status.size() << endl;	
+	for (unsigned int i=0; i<status.size(); i++) {
+		if (status[i]) 
+		{
+			imgpts1_good.push_back(imgpts1_tmp[i]);
+			imgpts2_good.push_back(imgpts2_tmp[i]);
+			new_matches.push_back(DMatch(matches[i].queryIdx,matches[i].trainIdx,1.0));
+#ifdef __SFM__DEBUG__
+			good_matches_.push_back(DMatch(imgpts1_good.size()-1,imgpts1_good.size()-1,1.0));
+			keypoints_1.push_back(imgpts1_tmp[i]);
+			keypoints_2.push_back(imgpts2_tmp[i]);
+#endif
+		}
+	}	
+	
+	cout << matches.size() << " matches before, " << new_matches.size() << " new matches\n";
+	matches = new_matches; //keep only those points who survived the fundamental matrix
+	
+	//-- Draw only "good" matches
+#ifdef __SFM__DEBUG__
+	{
+		Mat img_matches;
+		drawMatches( img_1, keypoints_1, img_2, keypoints_2,
+					good_matches_, img_matches, Scalar::all(-1), Scalar::all(-1),
+					vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );		
+		//-- Show detected matches
+		imshow( "Good Matches", img_matches );
+		waitKey(0);
+		destroyWindow("Good Matches");
+	}
+#endif		
+	
+	return F;
+}
+
 void FindCameraMatrices(const Mat& K, 
 						const Mat& Kinv, 
 						const vector<KeyPoint>& imgpts1,
@@ -56,80 +135,10 @@ void FindCameraMatrices(const Mat& K,
 	{
 		cout << "Find camera matrices...";
 		double t = getTickCount();
-		//Try to eliminate keypoints based on the fundamental matrix
-		//(although this is not the proper way to do this)
-		vector<uchar> status(imgpts1.size());
 		
-#ifdef __SFM__DEBUG__
-		std::vector< DMatch > good_matches_;
-		std::vector<KeyPoint> keypoints_1, keypoints_2;
-#endif		
-		//	undistortPoints(imgpts1, imgpts1, cam_matrix, distortion_coeff);
-		//	undistortPoints(imgpts2, imgpts2, cam_matrix, distortion_coeff);
-		//
-		imgpts1_good.clear(); imgpts2_good.clear();
-		
-		vector<KeyPoint> imgpts1_tmp;
-		vector<KeyPoint> imgpts2_tmp;
-		if (matches.size() <= 0) {
-			imgpts1_tmp = imgpts1;
-			imgpts2_tmp = imgpts2;
-		} else {
-			GetAlignedPointsFromMatch(imgpts1, imgpts2, matches, imgpts1_tmp, imgpts2_tmp);
-//			for (unsigned int i=0; i<matches.size(); i++) {
-//				imgpts1_tmp.push_back(imgpts1[matches[i].queryIdx]);
-//				imgpts2_tmp.push_back(imgpts2[matches[i].trainIdx]);
-//			}
-		}
-		
-		Mat F;
-		{
-			vector<Point2f> pts1,pts2;
-			KeyPointsToPoints(imgpts1_tmp, pts1);
-			KeyPointsToPoints(imgpts2_tmp, pts2);
-#ifdef __SFM__DEBUG__
-			cout << "pts1 " << pts1.size() << " (orig pts " << imgpts1_good.size() << ")" << endl;
-			cout << "pts2 " << pts2.size() << " (orig pts " << imgpts2_good.size() << ")" << endl;
-#endif
-			F = findFundamentalMat(pts1, pts2, FM_RANSAC, 3.0, 0.99, status);
-		}
-
-		vector<DMatch> new_matches;
-		cout << "keeping " << countNonZero(status) << " / " << status.size() << endl;	
-		for (unsigned int i=0; i<status.size(); i++) {
-			if (status[i]) 
-			{
-				imgpts1_good.push_back(imgpts1_tmp[i]);
-				imgpts2_good.push_back(imgpts2_tmp[i]);
-				new_matches.push_back(DMatch(matches[i].queryIdx,matches[i].trainIdx,1.0));
-#ifdef __SFM__DEBUG__
-				good_matches_.push_back(DMatch(imgpts1_good.size()-1,imgpts1_good.size()-1,1.0));
-				keypoints_1.push_back(imgpts1_tmp[i]);
-				keypoints_2.push_back(imgpts2_tmp[i]);
-#endif
-			}
-		}	
-		
-		cout << matches.size() << " matches before, " << new_matches.size() << " new matches\n";
-		matches = new_matches; //keep only those points who survived the fundamental matrix
-		
-		//-- Draw only "good" matches
-#ifdef __SFM__DEBUG__
-		{
-			Mat img_matches;
-			drawMatches( img_1, keypoints_1, img_2, keypoints_2,
-						good_matches_, img_matches, Scalar::all(-1), Scalar::all(-1),
-						vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );		
-			//-- Show detected matches
-			imshow( "Good Matches", img_matches );
-			waitKey(0);
-			destroyWindow("Good Matches");
-		}
-#endif		
-		
+		Mat F = GetFundamentalMat(imgpts1,imgpts2,imgpts1_good,imgpts2_good,matches);
 		
 		//Essential matrix: compute then extract cameras [R|t]
-		
 		Mat_<double> E = K.t() * F * K; //according to HZ (9.12)
 		//decompose E to P' , HZ (9.19)
 		//if(false)

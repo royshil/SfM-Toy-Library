@@ -14,7 +14,7 @@
 
 struct CloudPoint {
 	cv::Point3d pt;
-	std::vector<int> idx_in_imgpts_for_img;
+	std::vector<int> imgpt_for_img;
 };
 
 void KeyPointsToPoints(const std::vector<cv::KeyPoint>& kps, std::vector<cv::Point2f>& ps);

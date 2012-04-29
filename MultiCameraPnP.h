@@ -10,6 +10,8 @@
 
 #include "MultiCameraDistance.h"
 
+#include "Visualization.h"
+
 #include "Common.h"
 
 class MultiCameraPnP : public MultiCameraDistance {
@@ -79,10 +81,10 @@ public:
 			std::cout << "pt_set1.size() " << pt_set1.size() << " pt_set2.size() " << pt_set2.size() << " matches.size() " << matches.size() << std::endl;
 
 			for (unsigned int i=0; i<pcloud.size(); i++) {
-				pcloud[i].idx_in_imgpts_for_img = std::vector<int>(imgs.size(),-1);
+				pcloud[i].imgpt_for_img = std::vector<int>(imgs.size(),-1);
 				//matches[i] corresponds to pointcloud[i]
-				pcloud[i].idx_in_imgpts_for_img[0] = matches[i].queryIdx;
-				pcloud[i].idx_in_imgpts_for_img[1] = matches[i].trainIdx;
+				pcloud[i].imgpt_for_img[0] = matches[i].queryIdx;
+				pcloud[i].imgpt_for_img[1] = matches[i].trainIdx;
 			}
 		}
 		std::cout << "triangulation reproj error " << reproj_error << std::endl;
@@ -98,20 +100,14 @@ public:
 		
 		//loop images to incrementally recover more cameras 
 		for (unsigned int i=2; i < imgs.size(); i++) {
+			std::cout << "=========================" << imgs_names[0] << " -> " << imgs_names[i] << "=============================\n";
 			
-			//Update the match between i and 0
-			FindCameraMatrices(K, Kinv, 
-							   imgpts[0], 
+			//Update the match between i and 0 using the Fundamental matrix
+			GetFundamentalMat( imgpts[0], 
 							   imgpts[i], 
 							   imgpts_good[0],
 							   imgpts_good[i], 
-							   P, 
-							   Pmats[std::make_pair(0,i)],
-							   matches_matrix[std::make_pair(0,i)],
-							   tmp_pcloud
-#ifdef __SFM__DEBUG__
-							   ,imgs[0],imgs[i]
-#endif
+							   matches_matrix[std::make_pair(0,i)]
 							   );
 
 			//check for matches between i'th frame and 0'th frame (and thus the current cloud)
@@ -121,7 +117,7 @@ public:
 			for (unsigned int pt_img0=0; pt_img0<matches.size(); pt_img0++) {
 				int matches_img0_queryIdx = matches[pt_img0].queryIdx;
 				for (unsigned int pcldp=0; pcldp<pcloud.size(); pcldp++) {
-					if (matches_img0_queryIdx == pcloud[pcldp].idx_in_imgpts_for_img[0]) {
+					if (matches_img0_queryIdx == pcloud[pcldp].imgpt_for_img[0]) {
 						//point in cloud
 						ppcloud.push_back(pcloud[pcldp].pt);
 						//point in image i
@@ -133,7 +129,7 @@ public:
 			}
 			
 			
-			cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, true);
+			cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, false);
 //			cv::solvePnP(ppcloud, imgPoints, K, distcoeff, rvec, t, false, CV_EPNP);
 			
 			Rodrigues(rvec, R);
@@ -157,17 +153,29 @@ public:
 			std::cout << "before triangulation: " << start_i << " after " << pcloud.size() << std::endl;
 			
 			for (unsigned int j = 0; j<matches.size(); j++) {
-				pcloud[start_i + j].idx_in_imgpts_for_img = std::vector<int>(imgs.size(),-1);
+				pcloud[start_i + j].imgpt_for_img = std::vector<int>(imgs.size(),-1);
 				//matches[i] corresponds to pointcloud[i]
-				pcloud[start_i + j].idx_in_imgpts_for_img[0] = matches[j].queryIdx;
-				pcloud[start_i + j].idx_in_imgpts_for_img[i] = matches[j].trainIdx;
+				pcloud[start_i + j].imgpt_for_img[0] = matches[j].queryIdx;
+				pcloud[start_i + j].imgpt_for_img[i] = matches[j].trainIdx;
 			}
-			
 		}
 		
 		for (unsigned int i=0; i<pcloud.size(); i++) {
-			pointcloud.push_back(pcloud[i]);
-			pointCloudRGB.push_back(imgs_orig[0].at<cv::Vec3b>(imgpts[0][pcloud[i].idx_in_imgpts_for_img[0]].pt));
+			if (pcloud[i].imgpt_for_img[1] >= 0) {
+//				pointCloudRGB.push_back(cv::Vec3b(255,0,0));
+//				pointcloud.push_back(pcloud[i]);
+//				pointCloudRGB.push_back(imgs_orig[0].at<cv::Vec3b>(imgpts[0][pcloud[i].imgpt_for_img[0]].pt));
+			}
+			if (pcloud[i].imgpt_for_img[2] >= 0) {
+//				pointcloud.push_back(pcloud[i]);
+//				pointCloudRGB.push_back(imgs_orig[0].at<cv::Vec3b>(imgpts[0][pcloud[i].imgpt_for_img[0]].pt));
+//				pointCloudRGB.push_back(cv::Vec3b(0,255,0));
+			}
+			if (pcloud[i].imgpt_for_img[3] >= 0) {
+				pointcloud.push_back(pcloud[i]);
+				pointCloudRGB.push_back(imgs_orig[0].at<cv::Vec3b>(imgpts[0][pcloud[i].imgpt_for_img[0]].pt));
+//				pointCloudRGB.push_back(cv::Vec3b(0,0,255));
+			}
 		}
 		
 	}
