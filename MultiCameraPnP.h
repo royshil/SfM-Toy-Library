@@ -87,6 +87,15 @@ public:
 		}
 		std::cout << "triangulation reproj error " << reproj_error << std::endl;
 		
+		cv::Matx34d P1 = Pmats[std::make_pair(0,1)];
+		
+		cv::Mat_<double> distcoeff(1,4,0.0);
+		cv::Mat_<double> t = (cv::Mat_<double>(1,3) << P1(0,3), P1(1,3), P1(2,3));
+		cv::Mat_<double> R = (cv::Mat_<double>(3,3) << P1(0,0), P1(0,1), P1(0,2), 
+													   P1(1,0), P1(1,1), P1(1,2), 
+													   P1(2,0), P1(2,1), P1(2,2));
+		cv::Mat_<double> rvec(1,3); Rodrigues(R, rvec);
+		
 		//loop images to incrementally recover more cameras 
 		for (unsigned int i=2; i < imgs.size(); i++) {
 			
@@ -123,18 +132,17 @@ public:
 				}
 			}
 			
-			cv::Mat_<double> t,rvec; cv::Mat_<double> distcoeff(1,4,0.0);
 			
-			cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, false);
+			cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, true);
 //			cv::solvePnP(ppcloud, imgPoints, K, distcoeff, rvec, t, false, CV_EPNP);
 			
-			cv::Mat_<double> R(3,3); Rodrigues(rvec, R);
+			Rodrigues(rvec, R);
 			
 			std::cout << "found t = " << t << "\nR = \n"<<R<<std::endl;
 			
-			cv::Matx34d P1 = cv::Matx34d(R(0,0),R(0,1),R(0,2),t(0),
-										 R(1,0),R(1,1),R(1,2),t(1),
-										 R(2,0),R(2,1),R(2,2),t(2));
+			P1 = cv::Matx34d(R(0,0),R(0,1),R(0,2),t(0),
+							 R(1,0),R(1,1),R(1,2),t(1),
+							 R(2,0),R(2,1),R(2,2),t(2));
 			
 			Pmats[std::make_pair(0,i)] = P1;
 			
