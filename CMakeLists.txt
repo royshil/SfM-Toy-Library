@@ -10,6 +10,8 @@ find_package(OpenMP REQUIRED)
 if(NOT DEFINED FLTK_PATH)
     file(GLOB_RECURSE FLTK_PATH "${CMAKE_SOURCE_DIR}/Widget.h")
     if(FLTK_PATH STREQUAL FLTK_PATH-NOTFOUND   OR   FLTK_PATH STREQUAL "")
+		set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNO_FLTK")
+		set( FLTK-NOTFOUND TRUE )
         message(STATUS "FLTK was not found !!!!!")
     else()
         list(LENGTH FLTK_PATH FLTK_PATH_LEN)
@@ -57,21 +59,33 @@ file(GLOB SFM_LIB_SOURCES
 add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )
 
 # GUI part
-add_executable(SfMToyUI 
-	DistanceUI.cpp 
-	DistanceUI.h 
-	Visualization.cpp
-	Visualization.h
-	gui.cxx
-	gui.h
-	)
-
+IF( NOT ${FLTK-NOTFOUND} )
+	message(STATUS "Adding fltk to GUI")
+	add_executable(SfMToyUI 
+		DistanceUI.cpp 
+		DistanceUI.h 
+		Visualization.cpp
+		Visualization.h
+		gui.cxx
+		gui.h
+		)
+	
+	target_link_libraries(SfMToyUI 
+		${FLTK_LIBRARIES})
+ELSE()
+	message(STATUS "not using fltk in GUI")
+	add_executable(SfMToyUI 
+		Visualization.cpp
+		Visualization.h
+		)
+endif()
 
 target_link_libraries(SfMToyUI 
-			SfMToyLibrary
-			${OpenCV_LIBS}
-			${PCL_LIBRARIES}
-			${FLTK_LIBRARIES})
+	SfMToyLibrary
+	${OpenCV_LIBS}
+	${PCL_LIBRARIES}
+	)
+
 IF(APPLE)
 	target_link_libraries(SfMToyUI ${COCOA_LIBS})
 ENDIF(APPLE)
