@@ -15,6 +15,5 @@
 
 void RunVisualization(const std::vector<cv::Point3d>& pointcloud,
 					  const std::vector<cv::Vec3b>& pointcloud_RGB = std::vector<cv::Vec3b>(),
-					  const cv::Mat& img_1_orig = cv::Mat(), 
-					  const cv::Mat& img_2_orig = cv::Mat(),
-					  const std::vector<cv::KeyPoint>& correspImg1Pt = std::vector<cv::KeyPoint>());
+					  const std::vector<cv::Point3d>& pointcloud1 = std::vector<cv::Point3d>(),
+					  const std::vector<cv::Vec3b>& pointcloud1_RGB = std::vector<cv::Vec3b>());

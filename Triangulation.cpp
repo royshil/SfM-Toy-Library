@@ -130,16 +130,17 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 	double t = getTickCount();
 	vector<double> reproj_error;
 	unsigned int pts_size = pt_set1.size();
-//#pragma omp parallel for
+#pragma omp parallel for
 	for (unsigned int i=0; i<pts_size; i++) {
 		Point2f kp = pt_set1[i].pt; 
 		Point3d u(kp.x,kp.y,1.0);
 		Mat_<double> um = Kinv * Mat_<double>(u); 
-		u = um.at<Point3d>(0);
+		u.x = um(0); u.y = um(1); u.z = um(2);
+
 		Point2f kp1 = pt_set2[i].pt; 
 		Point3d u1(kp1.x,kp1.y,1.0);
 		Mat_<double> um1 = Kinv * Mat_<double>(u1); 
-		u1 = um1.at<Point3d>(0);
+		u1.x = um1(0); u1.y = um1(1); u1.z = um1(2);
 		
 		Mat_<double> X = IterativeLinearLSTriangulation(u,P,u1,P1);
 		
@@ -151,13 +152,11 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 		Mat_<double> xPt_img = K * Mat(P1) * X;
 //		cout <<	"Point * K: " << xPt_img << endl;
 		Point2f xPt_img_(xPt_img(0)/xPt_img(2),xPt_img(1)/xPt_img(2));
-//		cout << "Image point: " << xPt_img_ << endl;
-		reproj_error.push_back(norm(xPt_img_-kp1));
-		
-//		if(/*X(2) > 6 || */X(2) < 0) continue;
-		
+				
 #pragma omp critical
 		{
+			reproj_error.push_back(norm(xPt_img_-kp1));
+
 			CloudPoint cp; 
 			cp.pt = Point3d(X(0),X(1),X(2));
 			

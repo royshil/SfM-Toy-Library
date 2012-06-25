@@ -42,6 +42,11 @@ link_directories(${PCL_LIBRARY_DIRS} ${FLTK_LIB_DIR})
 add_definitions(${PCL_DEFINITIONS})
 include_directories(${FLTK_INCLUDE_DIR})
 
+set(SSBA_LIBRARY_DIR SSBA_LIBRARY_DIR-NOT_FOUND CACHE PATH "Directory to find SSBA libs")
+
+link_directories(${SSBA_LIBRARY_DIR})
+include_directories(${SSBA_LIBRARY_DIR}/../)
+
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
 
 # Core functions of SfM
@@ -54,9 +59,17 @@ file(GLOB SFM_LIB_SOURCES
 	IDistance.*
 	MultiCameraPnP.*
 	Common.*
+	IFeatureMatcher.*
+	RichFeatureMatcher.*
+	OFFeatureMatcher.*
+	BundleAdjuster.*
+	GPUSURFFeatureMatcher.*
 )
 
 add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )
+target_link_libraries(SfMToyLibrary 
+	V3D 
+	COLAMD)
 
 # GUI part
 IF( NOT ${FLTK-NOTFOUND} )
@@ -77,6 +90,7 @@ ELSE()
 	add_executable(SfMToyUI 
 		Visualization.cpp
 		Visualization.h
+		main.cpp
 		)
 endif()
 

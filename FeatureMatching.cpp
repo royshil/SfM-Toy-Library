@@ -15,6 +15,7 @@
 #include <opencv2/video/tracking.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/nonfree/features2d.hpp>
 
 #include <iostream>
 #include <set>
@@ -108,7 +109,7 @@ void MatchFeatures(const Mat& img_1, const Mat& img_1_orig,
 		
 		//-- Step 3: Matching descriptor vectors using FLANN matcher
 		//FlannBasedMatcher matcher;
-		BruteForceMatcher<L2<float> > matcher;
+		BFMatcher matcher(NORM_L2,true); //use an alternative to the ratio test
 		std::vector< DMatch > matches_;
 		if (matches == NULL) {
 			matches = &matches_;

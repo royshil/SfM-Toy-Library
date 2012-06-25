@@ -14,8 +14,8 @@
 #include "Common.h"
 #include "IDistance.h"
 #include "Triangulation.h"
-#include "FeatureMatching.h"
 #include "FindCameraMatrices.h"
+#include "RichFeatureMatcher.h"
 
 class Distance : public IDistance {
 private:
@@ -77,15 +77,15 @@ public:
 	
 	void OnlyMatchFeatures(int strategy = STRATEGY_USE_OPTICAL_FLOW + STRATEGY_USE_DENSE_OF + STRATEGY_USE_FEATURE_MATCH) {
 		imgpts1.clear(); imgpts2.clear(); fullpts1.clear(); fullpts2.clear();
-		MatchFeatures(left_im, left_im_orig, 
-					  right_im, right_im_orig,
-					  imgpts1,
-					  imgpts2,
-					  descriptors_1,
-					  descriptors_2,
-					  fullpts1,
-					  fullpts2,
-					  strategy);
+		
+		std::vector<cv::Mat> imgs; imgs.push_back(left_im); imgs.push_back(right_im);
+		std::vector<std::vector<cv::KeyPoint> > imgpts; imgpts.push_back(imgpts1); imgpts.push_back(imgpts2);
+		
+		RichFeatureMatcher rfm(imgs,imgpts);
+		rfm.MatchFeatures(0, 1);
+		
+		imgpts1 = rfm.GetImagePoints(0);
+		imgpts2 = rfm.GetImagePoints(1);
 		
 		features_matched = true;
 	}
@@ -105,30 +105,9 @@ public:
 		//TODO: if the P1 matrix is far away from identity rotation - the solution is probably invalid...
 		//so use an identity matrix
 		
-//		std::vector<cv::KeyPoint>& pt_set1 = (fullpts1.size()>0) ? fullpts1 : imgpts1_good;
-//		std::vector<cv::KeyPoint>& pt_set2 = (fullpts2.size()>0) ? fullpts2 : imgpts2_good;
+		std::vector<cv::KeyPoint> pt_set1,pt_set2;
+		GetAlignedPointsFromMatch(imgpts1,imgpts2,matches,pt_set1,pt_set2);
 		
-#if 0
-		//Use OpenCVs cvCorrectMatches
-		{
-			Mat m_F(F); CvMat cvm_F = m_F;
-			Mat m_Pts1(pt_set1); CvMat cvm_Pts1 = Mat(m_Pts1.t());
-			Mat m_Pts2(pt_set2); CvMat cvm_Pts2 = Mat(m_Pts2.t());
-			cvCorrectMatches(&cvm_F, &cvm_Pts1, &cvm_Pts2, NULL, NULL);
-			Mat m_Pts1_result(&cvm_Pts1); Mat(m_Pts1_result.t()).copyTo(m_Pts1);
-			Mat m_Pts2_result(&cvm_Pts2); Mat(m_Pts2_result.t()).copyTo(m_Pts2);
-		}
-#endif
-		
-		{
-		//	undistortPoints(pt_set1, pt_set1, cam_matrix, distortion_coeff);
-		//	undistortPoints(pt_set2, pt_set2, cam_matrix, distortion_coeff);
-		//	undistortPoints(pt_set1, pt_set1, cam_matrix, Mat_<double>::zeros(1,4));
-		//	undistortPoints(pt_set2, pt_set2, cam_matrix, Mat_<double>::zeros(1,4));
-		//	undistortPoints(pt_set1, pt_set1, Mat_<double>::eye(3,3), distortion_coeff);
-		//	undistortPoints(pt_set2, pt_set2, Mat_<double>::eye(3,3), distortion_coeff);
-		}
-		
-//		TriangulatePoints(pt_set1, pt_set2, Kinv, P, P1, pointcloud, correspImg1Pt);
+		TriangulatePoints(pt_set1, pt_set2, Kinv, P, P1, pointcloud, correspImg1Pt);
 	}
 };

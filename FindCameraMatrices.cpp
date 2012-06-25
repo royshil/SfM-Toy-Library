@@ -1,6 +1,6 @@
 /*
  *  FindCameraMatrices.cpp
- *  EyeRingOpenCV
+ *  SfM-Toy-Library
  *
  *  Created by Roy Shilkrot on 12/23/11.
  *  Copyright 2011 MIT. All rights reserved.
@@ -86,7 +86,8 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 		{
 			imgpts1_good.push_back(imgpts1_tmp[i]);
 			imgpts2_good.push_back(imgpts2_tmp[i]);
-			new_matches.push_back(DMatch(matches[i].queryIdx,matches[i].trainIdx,1.0));
+
+			new_matches.push_back(DMatch(matches[i].queryIdx,matches[i].trainIdx,matches[i].distance));
 #ifdef __SFM__DEBUG__
 			good_matches_.push_back(DMatch(imgpts1_good.size()-1,imgpts1_good.size()-1,1.0));
 			keypoints_1.push_back(imgpts1_tmp[i]);
@@ -115,7 +116,7 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 	return F;
 }
 
-void FindCameraMatrices(const Mat& K, 
+bool FindCameraMatrices(const Mat& K, 
 						const Mat& Kinv, 
 						const vector<KeyPoint>& imgpts1,
 						const vector<KeyPoint>& imgpts2,
@@ -141,18 +142,7 @@ void FindCameraMatrices(const Mat& K,
 		//Essential matrix: compute then extract cameras [R|t]
 		Mat_<double> E = K.t() * F * K; //according to HZ (9.12)
 		//decompose E to P' , HZ (9.19)
-		//if(false)
 		{			
-//			RNG rng;
-//			unsigned int idx = rng(imgpts1_good.size());
-//			Point2f kp = imgpts1_good[idx].pt; 
-//			Point3d u(kp.x,kp.y,1.0);
-//			Mat_<double> um = Kinv * Mat_<double>(u); 
-//			u = um.at<Point3d>(0);
-//			Point2f kp1 = imgpts2_good[idx].pt;
-//			Point3d u1(kp1.x,kp1.y,1.0);
-//			Mat_<double> um1 = Kinv * Mat_<double>(u1); 
-//			u1 = um1.at<Point3d>(0);
 			
 #ifndef USE_EIGEN
 			SVD svd(E,SVD::MODIFY_A);
@@ -181,11 +171,14 @@ void FindCameraMatrices(const Mat& K,
 			cout << "U:\n"<<svd_u<<"\nW:\n"<<svd_w<<"\nVt:\n"<<svd_vt<<endl;
 			cout << "----------------------------------------------------\n";
 
-//			if (fabsf(svd_w.at<double>(0) - svd_w.at<double>(1)) > 0.75) {
-//				cout << "singular values are too far apart\n";
-//				P1 = 0; 
-//				return;
-//			}
+			//check if first and second singular values are the same (as they should be)
+			double singular_values_ratio = fabsf(svd_w.at<double>(0) / svd_w.at<double>(1));
+			if(singular_values_ratio>1.0) singular_values_ratio = 1.0/singular_values_ratio; // flip ratio to keep it [0,1]
+			if (singular_values_ratio < 0.7) {
+				cout << "singular values are too far apart\n";
+				P1 = 0; 
+				return false;
+			}
 			
 			Matx33d W(0,-1,0,	//HZ 9.13
 					  1,0,0,
@@ -199,7 +192,7 @@ void FindCameraMatrices(const Mat& K,
 			if (!CheckCoherentRotation(R)) {
 				cout << "resulting rotation is not coherent\n";
 				P1 = 0;
-				return;
+				return false;
 			}			
 			
 			P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
@@ -212,7 +205,7 @@ void FindCameraMatrices(const Mat& K,
 			Scalar X = mean(CloudPointsToPoints(pcloud));
 			cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 			
-			//check if point is in front of cameras for all 4 configurations
+			//check if pointa are triangulated --in front-- of cameras for all 4 ambiguations
 			if (X(2) < 0) {
 				t = -svd_u.col(2); //-u3
 				P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
@@ -222,12 +215,12 @@ void FindCameraMatrices(const Mat& K,
 
 				pcloud.clear(); corresp.clear();
 				TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
-				X = mean(pcloud);
+				X = mean(CloudPointsToPoints(pcloud));
 				cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 				
 				if (X(2) < 0) {
 					t = svd_u.col(2); //u3
-					R = svd_u * Mat(Wt) * svd_vt;
+					R = svd_u * Mat(Wt) * svd_vt; //UWtVt
 					P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
 								 R(1,0),	R(1,1),	R(1,2),	t(1),
 								 R(2,0),	R(2,1),	R(2,2), t(2));
@@ -235,7 +228,7 @@ void FindCameraMatrices(const Mat& K,
 
 					pcloud.clear(); corresp.clear();
 					TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
-					X = mean(pcloud);
+					X = mean(CloudPointsToPoints(pcloud));
 					cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 					
 					if (X(2) < 0) {
@@ -247,7 +240,7 @@ void FindCameraMatrices(const Mat& K,
 
 						pcloud.clear(); corresp.clear();
 						TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
-						X = mean(pcloud);
+						X = mean(CloudPointsToPoints(pcloud));
 						cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 						
 						if (X(2) < 0) {
@@ -264,4 +257,5 @@ void FindCameraMatrices(const Mat& K,
 		t = ((double)getTickCount() - t)/getTickFrequency();
 		cout << "Done. (" << t <<"s)"<< endl;
 	}
+	return true;
 }

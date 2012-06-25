@@ -4,8 +4,8 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include <opencv2/nonfree/features2d.hpp>
 #include "FeatureMatching.h"
-#include <libgen.h>
 #include "FindCameraMatrices.h"
 
 using namespace cv;
@@ -44,7 +44,7 @@ int main( int argc, char** argv )
 		extractor.compute(img_1, keypoints_1, descriptors_1);
 		extractor.compute(img_2, keypoints_2, descriptors_2);
 		
-		BruteForceMatcher<L2<float> > matcher;
+		BFMatcher matcher(NORM_L2);
 		vector<DMatch> Fmatches;
 		matcher.match(descriptors_1, descriptors_2, Fmatches);
 		
@@ -75,7 +75,7 @@ int main( int argc, char** argv )
 
 	
 	
-	imwrite(std::string(basename(argv[1])) + "_keypoints.png", img_keypoints);
+	imwrite(std::string(argv[1]) + "_keypoints.png", img_keypoints);
 	
 	return 0;
 }
