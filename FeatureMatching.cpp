@@ -23,10 +23,10 @@
 using namespace std;
 using namespace cv;
 
-void KeyPointsToPoints(const vector<KeyPoint>& kps, vector<Point2f>& ps) {
-	ps.clear();
-	for (unsigned int i=0; i<kps.size(); i++) ps.push_back(kps[i].pt);
-}
+//void KeyPointsToPoints(const vector<KeyPoint>& kps, vector<Point2f>& ps) {
+//	ps.clear();
+//	for (unsigned int i=0; i<kps.size(); i++) ps.push_back(kps[i].pt);
+//}
 
 void MatchFeatures(const Mat& img_1, const Mat& img_1_orig, 
 				   const Mat& img_2, const Mat& img_2_orig,

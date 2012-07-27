@@ -163,7 +163,7 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 		
 			if(!use_gpu)
 				cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, true);
-	//			cv::solvePnP(ppcloud, imgPoints, K, distcoeff, rvec, t, false, CV_EPNP);
+//				cv::solvePnP(ppcloud, imgPoints, K, distcoeff, rvec, t, false, CV_EPNP);
 			else {
 				//use GPU ransac
 				//make sure datatstructures are cv::gpu compatible
@@ -208,42 +208,68 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 		
 			unsigned int start_i = pcloud.size();
 		
+			vector<CloudPoint> new_triangulated;
+			
 			//adding more triangulated points to general cloud
-			double reproj_error = TriangulatePoints(pt_set1, pt_set2, Kinv, P, P1, pcloud, correspImg1Pt);
+			double reproj_error = TriangulatePoints(pt_set1, pt_set2, Kinv, P, P1, new_triangulated, correspImg1Pt);
 			std::cout << "triangulation reproj error " << reproj_error << std::endl;
 
 			if(reproj_error > 100.0) {
 				// somethign went awry, delete those triangulated points
-				pcloud.resize(start_i);
+//				pcloud.resize(start_i);
 				cerr << "reprojection error too high, don't include these points."<<endl;
 				continue;
 			}
 
-			std::cout << "before triangulation: " << start_i << " after " << pcloud.size() << std::endl;
-		
+			vector<int> add_to_cloud(new_triangulated.size());
 			int found_other_views_count = 0;
 			for (unsigned int j = 0; j<matches.size(); j++) {
-				pcloud[start_i + j].imgpt_for_img = std::vector<int>(imgs.size(),-1);
+				new_triangulated[j].imgpt_for_img = std::vector<int>(imgs.size(),-1);
 
-				//matches[i] corresponds to pointcloud[i]
-				pcloud[start_i + j].imgpt_for_img[view] = matches[j].queryIdx;
+				//matches[j] corresponds to pointcloud[j]
+				//matches[j].queryIdx = point in <view>
+				//matches[j].trainIdx = point in <i>
+				new_triangulated[j].imgpt_for_img[view] = matches[j].queryIdx; //2D reference to <view>
 				bool found_in_other_view = false;
 				for (unsigned int view_ = 1; view_ < i; view_++) {
-					std::vector<cv::DMatch> submatches = matches_matrix[std::make_pair(view,view_)];
+					if(view_ == view) continue;
+					std::vector<cv::DMatch> submatches = matches_matrix[std::make_pair(view_,i)];
 					for (unsigned int ii = 0; ii < submatches.size(); ii++) {
-						if (submatches[ii].queryIdx == matches[j].queryIdx) {
-							pcloud[start_i + j].imgpt_for_img[view_] = submatches[ii].trainIdx;
+						if (submatches[ii].trainIdx == matches[j].trainIdx) 
+						{
+							cout << "2d pt " << submatches[ii].queryIdx << " in img " << view_ << " matched 2d pt " << submatches[ii].trainIdx << " in img " << i << endl;
+							//Point was alredy found in another view - strengthen it in the known cloud
+							for (unsigned int pt3d=0; pt3d<pcloud.size(); pt3d++) {
+								if (pcloud[pt3d].imgpt_for_img[view_] == submatches[ii].queryIdx) 
+								{
+									cout << "3d point "<<pt3d<<" in cloud, referenced 2d pt " << submatches[ii].queryIdx << " in view " << view_ << endl;
+									pcloud[pt3d].imgpt_for_img[i] = matches[j].trainIdx;
+									pcloud[pt3d].imgpt_for_img[view] = matches[j].queryIdx;
+								}
+							}
+							
 							found_in_other_view = true;
+							add_to_cloud[j] = 0;
 							break;
 						}
 					}
 				}
 				if (found_in_other_view) {
 					found_other_views_count++;
+				} else {
+					add_to_cloud[j] = 1;
 				}
-				pcloud[start_i + j].imgpt_for_img[i] = matches[j].trainIdx;
+
+				new_triangulated[j].imgpt_for_img[i] = matches[j].trainIdx;
 			}
-			std::cout << matches.size() << "/" << found_other_views_count << " points were found in other views\n";
+			std::cout << found_other_views_count << "/" << matches.size() << " points were found in other views\n";
+
+			for (int j=0; j<add_to_cloud.size(); j++) {
+				if(add_to_cloud[j] == 1)
+					pcloud.push_back(new_triangulated[j]);
+			}
+			
+			std::cout << "before triangulation: " << start_i << " after " << pcloud.size() << std::endl;
 
 			break;
 		}

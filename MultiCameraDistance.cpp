@@ -14,12 +14,8 @@
 
 //c'tor
 MultiCameraDistance::MultiCameraDistance(const std::vector<cv::Mat>& imgs_, const std::vector<std::string>& imgs_names_, const std::string& imgs_path_):
-imgs_names(imgs_names_)
-{	
-	features_matched = false;
-	use_rich_features = true;
-	use_gpu = true;
-	
+imgs_names(imgs_names_),features_matched(false),use_rich_features(true),use_gpu(true)
+{		
 	std::cout << "=========================== Load Images ===========================\n";
 	//ensure images are CV_8UC3
 	for (unsigned int i=0; i<imgs_.size(); i++) {
@@ -43,17 +39,7 @@ imgs_names(imgs_names_)
 		std::cout << ".";
 	}
 	std::cout << std::endl;
-	
-	if (use_rich_features) {
-		if (use_gpu) {
-			feature_matcher = new GPUSURFFeatureMatcher(imgs,imgpts);
-		} else {
-			feature_matcher = new RichFeatureMatcher(imgs,imgpts);
-		}
-	} else {
-		feature_matcher = new OFFeatureMatcher(imgs,imgpts);
-	}
-	
+		
 	//load calibration matrix
 	cv::FileStorage fs;
 	if(fs.open(imgs_path_+ "\\out_camera_data.yml",cv::FileStorage::READ)) {
@@ -75,6 +61,16 @@ imgs_names(imgs_names_)
 void MultiCameraDistance::OnlyMatchFeatures(int strategy) 
 {
 	if(features_matched) return;
+	
+	if (use_rich_features) {
+		if (use_gpu) {
+			feature_matcher = new GPUSURFFeatureMatcher(imgs,imgpts);
+		} else {
+			feature_matcher = new RichFeatureMatcher(imgs,imgpts);
+		}
+	} else {
+		feature_matcher = new OFFeatureMatcher(imgs,imgpts);
+	}	
 
 	if(strategy & STRATEGY_USE_OPTICAL_FLOW)
 		use_rich_features = false;

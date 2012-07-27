@@ -26,8 +26,7 @@ void GetAlignedPointsFromMatch(const std::vector<cv::KeyPoint>& imgpts1,
 							   const std::vector<cv::KeyPoint>& imgpts2,
 							   const std::vector<cv::DMatch>& matches,
 							   std::vector<cv::KeyPoint>& pt_set1,
-							   std::vector<cv::KeyPoint>& pt_set2,
-							   std::vector<int>& back_pairing = std::vector<int>());
+							   std::vector<cv::KeyPoint>& pt_set2);
 
 void drawArrows(cv::Mat& frame, const std::vector<cv::Point2f>& prevPts, const std::vector<cv::Point2f>& nextPts, const std::vector<uchar>& status, cv::Scalar line_color = cv::Scalar(0, 0, 255));
 

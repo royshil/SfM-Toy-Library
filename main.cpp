@@ -8,6 +8,7 @@
  */
 
 #include <iostream>
+#include <string.h>
 
 #include "Distance.h"
 #include "MultiCameraPnP.h"
@@ -39,8 +40,8 @@ int main(int argc, char** argv) { //test with real photos
 //---------------------------- Using command-line ----------------------------
 
 int main(int argc, char** argv) {
-	if (argc != 2) {
-		cerr << "USAGE: " << argv[0] << " <path_to_images>" << endl;
+	if (argc < 2) {
+		cerr << "USAGE: " << argv[0] << " <path_to_images> [use rich features (RICH/OF) = RICH] [use GPU (GPU/CPU) = GPU]" << endl;
 		return 0;
 	}
 	
@@ -51,6 +52,17 @@ int main(int argc, char** argv) {
 	}
 	
 	cv::Ptr<MultiCameraPnP> distance = new MultiCameraPnP(images,images_names,string(argv[1]));
+	if(argc < 3)
+		distance->use_rich_features = true;
+	else
+		distance->use_rich_features = (strcmp(argv[2], "RICH") == 0);
+	
+	if(argc < 4)
+		distance->use_gpu = true;
+	else
+		distance->use_gpu = (strcmp(argv[3], "GPU") == 0);
+	
+
 	distance->RecoverDepthFromImages();
 	
 	RunVisualization(distance->getPointCloud(), 

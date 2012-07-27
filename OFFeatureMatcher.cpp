@@ -48,8 +48,8 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 	calcOpticalFlowPyrLK(prevgray, gray, i_pts, j_pts, vstatus, verror);
 	
 	for (unsigned int i=0; i<vstatus.size(); i++) {
-#ifdef __SFM__DEBUG__
 		if (vstatus[i]) {
+#ifdef __SFM__DEBUG__
 			if (i%10==0 && verror[i] < 20.0) { //prune some matches for display purposes
 				vstatus[i] = 1;
 			} else {

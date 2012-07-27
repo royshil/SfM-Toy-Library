@@ -43,9 +43,10 @@ protected:
 	cv::Ptr<IFeatureMatcher> feature_matcher;
 	
 	bool features_matched;
+public:
 	bool use_rich_features;
 	bool use_gpu;
-public:
+
 	std::vector<cv::Point3d> getPointCloud() { return CloudPointsToPoints(pointcloud); }
 	const cv::Mat& get_im_orig(int frame_num) { return imgs_orig[frame_num]; }
 	const std::vector<cv::KeyPoint>& getcorrespImg1Pt() { return correspImg1Pt; }

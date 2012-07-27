@@ -62,19 +62,19 @@ void SORFilter() {
 	copyPointCloud(*cloud_filtered,*cloud);
 	copyPointCloud(*cloud,*orig_cloud);
 	
-	std::cerr << "PointCloud before VoxelGrid filtering: " << cloud->width * cloud->height << " data points (" << pcl::getFieldsList (*cloud) << ")."<<std::endl;
-	
-	cloud_filtered.reset(new pcl::PointCloud<pcl::PointXYZRGB>);
-	
-	// Create the filtering object
-	pcl::VoxelGrid<pcl::PointXYZRGB> vgrid;
-	vgrid.setInputCloud (cloud);
-	vgrid.setLeafSize (0.1f, 0.1f, 0.1f);
-	vgrid.filter (*cloud_filtered);
-	
-	std::cerr << "PointCloud after VoxelGrid filtering: " << cloud_filtered->width * cloud_filtered->height << " data points (" << pcl::getFieldsList (*cloud_filtered) << ")."<<std::endl;	
-	
-	copyPointCloud(*cloud_filtered,*cloud);
+//	std::cerr << "PointCloud before VoxelGrid filtering: " << cloud->width * cloud->height << " data points (" << pcl::getFieldsList (*cloud) << ")."<<std::endl;
+//	
+//	cloud_filtered.reset(new pcl::PointCloud<pcl::PointXYZRGB>);
+//	
+//	// Create the filtering object
+//	pcl::VoxelGrid<pcl::PointXYZRGB> vgrid;
+//	vgrid.setInputCloud (cloud);
+//	vgrid.setLeafSize (0.1f, 0.1f, 0.1f);
+//	vgrid.filter (*cloud_filtered);
+//	
+//	std::cerr << "PointCloud after VoxelGrid filtering: " << cloud_filtered->width * cloud_filtered->height << " data points (" << pcl::getFieldsList (*cloud_filtered) << ")."<<std::endl;	
+//	
+//	copyPointCloud(*cloud_filtered,*cloud);
 }	
 
 bool show_cloud = false;

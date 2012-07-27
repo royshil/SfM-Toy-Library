@@ -26,15 +26,12 @@ void GetAlignedPointsFromMatch(const std::vector<cv::KeyPoint>& imgpts1,
 							   const std::vector<cv::KeyPoint>& imgpts2,
 							   const std::vector<cv::DMatch>& matches,
 							   std::vector<cv::KeyPoint>& pt_set1,
-							   std::vector<cv::KeyPoint>& pt_set2,
-							   vector<int>& back_pairing) 
+							   std::vector<cv::KeyPoint>& pt_set2) 
 {
-	back_pairing.clear();
 	for (unsigned int i=0; i<matches.size(); i++) {
 //		cout << "matches[i].queryIdx " << matches[i].queryIdx << " matches[i].trainIdx " << matches[i].trainIdx << endl;
 		pt_set1.push_back(imgpts1[matches[i].queryIdx]);
 		pt_set2.push_back(imgpts2[matches[i].trainIdx]);
-		back_pairing.push_back(i);
 	}	
 }
 
@@ -109,6 +106,8 @@ bool hasEndingLower (string const &fullString_, string const &ending)
 
 #ifndef WIN32
 //open a directory the POSIX way
+#include <dirent.h>
+
 void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names) {
 	if (dir_name == NULL) {
 		return;

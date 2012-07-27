@@ -83,7 +83,7 @@ void GPUSURFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* 
 		cout << "match " << descriptors_1.rows << " vs. " << descriptors_2.rows << " ...";
 
 		if(use_ratio_test) {
-			vector<vector<DMatch>> knn_matches;
+			vector<vector<DMatch> > knn_matches;
 			GpuMat trainIdx,distance,allDist;
 			CV_PROFILE(
 				matcher.knnMatchSingle(descriptors_1,descriptors_2,trainIdx,distance,allDist,2); 
@@ -94,8 +94,8 @@ void GPUSURFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* 
 
 			//ratio test
 			for(int i=0;i<knn_matches.size();i++) {
-				if(matches[i][0].distance / matches[i][1].distance < 0.7) {
-					(*matches).push_back(matches[i][0]);
+				if(knn_matches[i][0].distance / knn_matches[i][1].distance < 0.7) {
+					(*matches).push_back(knn_matches[i][0]);
 				}
 			}
 			cout << "kept " << (*matches).size() << " features after ratio test"<<endl;
