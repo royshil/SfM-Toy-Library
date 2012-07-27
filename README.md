@@ -11,12 +11,14 @@ Prerequisite
 ### How to make
 
 On MacOS
+
 	mkdir build
 	cd build
 	cmake -DSSBA_LIBRARY_DIR=../../SSBA-3.0/build -G "Xcode" ..
 	open SfMToyExample.xcodeproj
 
 On Linux
+
 	mkdir build
 	cd build
 	cmake -SSBA_LIBRARY_DIR=../../SSBA-3.0/build -G "Unix Makefiles" ..
