@@ -15,7 +15,7 @@
 #include <opencv2/video/tracking.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
-#include <opencv2/nonfree/features2d.hpp>
+#include <opencv2/nonfree/nonfree.hpp>
 
 #include <iostream>
 #include <set>
@@ -28,8 +28,8 @@ RichFeatureMatcher::RichFeatureMatcher(std::vector<cv::Mat>& imgs_,
 									   std::vector<std::vector<cv::KeyPoint> >& imgpts_) :
 	imgpts(imgpts_), imgs(imgs_)
 {
-	detector = FeatureDetector::create("SURF");
-	extractor = DescriptorExtractor::create("SURF");
+	detector = FeatureDetector::create("PyramidFAST");
+	extractor = DescriptorExtractor::create("ORB");
 	
 	std::cout << " -------------------- extract feature points for all images -------------------\n";
 	
@@ -65,13 +65,21 @@ void RichFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* mat
 	}
 	
 	//matching descriptor vectors using Brute Force matcher
-	BFMatcher matcher(NORM_L2);
+	BFMatcher matcher(NORM_HAMMING,true); //allow cross-check
 	std::vector< DMatch > matches_;
 	if (matches == NULL) {
 		matches = &matches_;
 	}
 	if (matches->size() == 0) {
-		matcher.match( descriptors_1, descriptors_2, *matches );
+		vector<vector<DMatch> > nn_matches;
+		matcher.knnMatch(descriptors_1,descriptors_2,nn_matches,1);
+		matches->clear();
+		for(int i=0;i<nn_matches.size();i++) {
+			if(nn_matches[i].size()>0)
+				matches->push_back(nn_matches[i][0]);
+		}
+
+		//matcher.match( descriptors_1, descriptors_2, *matches );
 	}
 
 	return;

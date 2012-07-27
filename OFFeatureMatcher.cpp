@@ -47,6 +47,7 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 	vector<uchar> vstatus; vector<float> verror;
 	calcOpticalFlowPyrLK(prevgray, gray, i_pts, j_pts, vstatus, verror);
 	
+	double thresh = 2.0;
 	for (unsigned int i=0; i<vstatus.size(); i++) {
 		if (vstatus[i]) {
 #ifdef __SFM__DEBUG__
@@ -57,12 +58,22 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 			}
 #endif
 
-			matches->push_back(DMatch(i,i,1.0));
+			for(int j=0;j<imgpts[idx_j].size();j++) {
+				if(norm(j_pts[i]-imgpts[idx_j][j].pt) < thresh) {
+					matches->push_back(DMatch(i,j,1.0));
+				}
+			}
 		}
 	}
 	
-	PointsToKeyPoints(j_pts,imgpts[idx_j]);
-	
+	//vector<KeyPoint> tmpkpts;
+	//PointsToKeyPoints(j_pts,tmpkpts);
+
+	//
+	//for(int i=0;i<tmpkpts.size();i++) {
+	//	
+	//}
+
 #ifdef __SFM__DEBUG__
 	{
 		// draw flow field

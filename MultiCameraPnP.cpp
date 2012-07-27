@@ -162,7 +162,7 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 			}
 		
 			if(!use_gpu)
-				cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, true);
+				cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, false);
 //				cv::solvePnP(ppcloud, imgPoints, K, distcoeff, rvec, t, false, CV_EPNP);
 			else {
 				//use GPU ransac
@@ -184,10 +184,10 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 			}
 
 			Rodrigues(rvec, R);
-			if(!CheckCoherentRotation(R)) {
-				cerr << "rotation is incoherent. we should try a different base view..." << endl;
-				continue;
-			}
+			//if(!CheckCoherentRotation(R)) {
+			//	cerr << "rotation is incoherent. we should try a different base view..." << endl;
+			//	continue;
+			//}
 		
 			std::cout << "found t = " << t << "\nR = \n"<<R<<std::endl;
 		
@@ -229,28 +229,31 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 				//matches[j] corresponds to pointcloud[j]
 				//matches[j].queryIdx = point in <view>
 				//matches[j].trainIdx = point in <i>
-				new_triangulated[j].imgpt_for_img[view] = matches[j].queryIdx; //2D reference to <view>
+				new_triangulated[j].imgpt_for_img[view] = matches[j].queryIdx;	//2D reference to <view>
+				new_triangulated[j].imgpt_for_img[i] = matches[j].trainIdx;		//2D reference to <i>
 				bool found_in_other_view = false;
 				for (unsigned int view_ = 1; view_ < i; view_++) {
 					if(view_ == view) continue;
+
+					//Look for points in <view_> that match to points in <i>
 					std::vector<cv::DMatch> submatches = matches_matrix[std::make_pair(view_,i)];
 					for (unsigned int ii = 0; ii < submatches.size(); ii++) {
-						if (submatches[ii].trainIdx == matches[j].trainIdx) 
+						if (submatches[ii].trainIdx == matches[j].trainIdx &&
+							!found_in_other_view) 
 						{
-							cout << "2d pt " << submatches[ii].queryIdx << " in img " << view_ << " matched 2d pt " << submatches[ii].trainIdx << " in img " << i << endl;
-							//Point was alredy found in another view - strengthen it in the known cloud
+							//Point was already found in <view_> - strengthen it in the known cloud, if it exists there
+
+							//cout << "2d pt " << submatches[ii].queryIdx << " in img " << view_ << " matched 2d pt " << submatches[ii].trainIdx << " in img " << i << endl;
 							for (unsigned int pt3d=0; pt3d<pcloud.size(); pt3d++) {
 								if (pcloud[pt3d].imgpt_for_img[view_] == submatches[ii].queryIdx) 
 								{
-									cout << "3d point "<<pt3d<<" in cloud, referenced 2d pt " << submatches[ii].queryIdx << " in view " << view_ << endl;
+									//cout << "3d point "<<pt3d<<" in cloud, referenced 2d pt " << submatches[ii].queryIdx << " in view " << view_ << endl;
 									pcloud[pt3d].imgpt_for_img[i] = matches[j].trainIdx;
 									pcloud[pt3d].imgpt_for_img[view] = matches[j].queryIdx;
+									found_in_other_view = true;
+									add_to_cloud[j] = 0;
 								}
 							}
-							
-							found_in_other_view = true;
-							add_to_cloud[j] = 0;
-							break;
 						}
 					}
 				}
@@ -259,10 +262,8 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 				} else {
 					add_to_cloud[j] = 1;
 				}
-
-				new_triangulated[j].imgpt_for_img[i] = matches[j].trainIdx;
 			}
-			std::cout << found_other_views_count << "/" << matches.size() << " points were found in other views\n";
+			std::cout << found_other_views_count << "/" << matches.size() << " points were found in other views, adding only " << cv::countNonZero(add_to_cloud) << " new\n";
 
 			for (int j=0; j<add_to_cloud.size(); j++) {
 				if(add_to_cloud[j] == 1)
@@ -277,15 +278,17 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 
 	for (unsigned int i=0; i<pcloud.size(); i++) {
 		pointcloud_beforeBA.push_back(pcloud[i]);
-		int good_view = 0;
-		for(; good_view < imgs.size(); good_view++) {
+		unsigned int good_view = 0;
+		for(; good_view < imgs_orig.size(); good_view++) {
 			if(pcloud[i].imgpt_for_img[good_view] != -1) {
 				int pt_idx = pcloud[i].imgpt_for_img[good_view];
 				if(pt_idx >= imgpts[good_view].size()) {
 					cerr << "BUG: point id:" << pt_idx << " should not exist for img #" << good_view << " which has only " << imgpts[good_view].size() << endl;
 					continue;
 				}
-				pointCloudRGB_beforeBA.push_back(imgs_orig[good_view].at<cv::Vec3b>(imgpts[good_view][pt_idx].pt));
+				cv::Point _pt = imgpts[good_view][pt_idx].pt;
+				assert(good_view < imgs_orig.size() && _pt.x < imgs_orig[good_view].cols && _pt.y < imgs_orig[good_view].rows);
+				pointCloudRGB_beforeBA.push_back(imgs_orig[good_view].at<cv::Vec3b>(_pt));
 				break;
 			}
 		}

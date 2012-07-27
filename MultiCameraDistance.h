@@ -26,7 +26,8 @@ protected:
 
 	std::map<std::pair<int,int> ,std::vector<cv::DMatch> > matches_matrix;
 	
-	std::vector<cv::Mat> imgs, imgs_orig;
+	std::vector<cv::Mat_<cv::Vec3b> > imgs_orig;
+	std::vector<cv::Mat> imgs;
 	std::vector<std::string> imgs_names;
 	
 	std::map<std::pair<int,int> ,cv::Matx34d> Pmats;

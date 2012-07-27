@@ -19,16 +19,15 @@ imgs_names(imgs_names_),features_matched(false),use_rich_features(true),use_gpu(
 	std::cout << "=========================== Load Images ===========================\n";
 	//ensure images are CV_8UC3
 	for (unsigned int i=0; i<imgs_.size(); i++) {
-		imgs_orig.push_back(cv::Mat());
+		imgs_orig.push_back(cv::Mat_<cv::Vec3b>());
 		if (!imgs_[i].empty()) {
 			if (imgs_[i].type() == CV_8UC1) {
 				cvtColor(imgs_[i], imgs_orig[i], CV_GRAY2BGR);
 			} else if (imgs_[i].type() == CV_32FC3 || imgs_[i].type() == CV_64FC3) {
-				imgs_[i].convertTo(imgs_orig[i],CV_8U,255.0);
+				imgs_[i].convertTo(imgs_orig[i],CV_8UC3,255.0);
 			} else {
 				imgs_[i].copyTo(imgs_orig[i]);
 			}
-			
 		}
 		
 		imgs.push_back(cv::Mat());

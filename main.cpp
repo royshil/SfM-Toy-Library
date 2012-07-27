@@ -16,6 +16,8 @@
 
 using namespace std;
 
+#include <opencv2/gpu/gpu.hpp>
+
 std::vector<cv::Mat> images;
 std::vector<std::string> images_names;
 
@@ -58,7 +60,7 @@ int main(int argc, char** argv) {
 		distance->use_rich_features = (strcmp(argv[2], "RICH") == 0);
 	
 	if(argc < 4)
-		distance->use_gpu = true;
+		distance->use_gpu = (cv::gpu::getCudaEnabledDeviceCount() > 0);
 	else
 		distance->use_gpu = (strcmp(argv[3], "GPU") == 0);
 	
