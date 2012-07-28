@@ -74,6 +74,7 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 	//	
 	//}
 
+#if 0
 #ifdef __SFM__DEBUG__
 	{
 		// draw flow field
@@ -83,5 +84,6 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 		waitKey(100);
 		destroyWindow("Flow Field");
 	}
+#endif
 #endif
 }

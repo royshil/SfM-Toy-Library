@@ -71,6 +71,10 @@ target_link_libraries(SfMToyLibrary
 	V3D 
 	COLAMD)
 
+if(MSVC)
+	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "/openmp")
+endif()
+
 # GUI part
 IF( NOT ${FLTK-NOTFOUND} )
 	message(STATUS "Adding fltk to GUI")

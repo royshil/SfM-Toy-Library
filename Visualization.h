@@ -17,3 +17,6 @@ void RunVisualization(const std::vector<cv::Point3d>& pointcloud,
 					  const std::vector<cv::Vec3b>& pointcloud_RGB = std::vector<cv::Vec3b>(),
 					  const std::vector<cv::Point3d>& pointcloud1 = std::vector<cv::Point3d>(),
 					  const std::vector<cv::Vec3b>& pointcloud1_RGB = std::vector<cv::Vec3b>());
+
+void visualizerShowCamera(const float R[9], const float t[3], float r, float g, float b);
+void visualizerShowCamera(const cv::Matx33f& R, const cv::Vec3f& t, float r, float g, float b, double s);

@@ -223,7 +223,8 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 
 			vector<int> add_to_cloud(new_triangulated.size());
 			int found_other_views_count = 0;
-			for (unsigned int j = 0; j<matches.size(); j++) {
+#pragma omp parallel for
+			for (int j = 0; j<matches.size(); j++) {
 				new_triangulated[j].imgpt_for_img = std::vector<int>(imgs.size(),-1);
 
 				//matches[j] corresponds to pointcloud[j]
@@ -248,22 +249,28 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 								if (pcloud[pt3d].imgpt_for_img[view_] == submatches[ii].queryIdx) 
 								{
 									//cout << "3d point "<<pt3d<<" in cloud, referenced 2d pt " << submatches[ii].queryIdx << " in view " << view_ << endl;
-									pcloud[pt3d].imgpt_for_img[i] = matches[j].trainIdx;
-									pcloud[pt3d].imgpt_for_img[view] = matches[j].queryIdx;
-									found_in_other_view = true;
-									add_to_cloud[j] = 0;
+#pragma omp critical 
+									{
+										pcloud[pt3d].imgpt_for_img[i] = matches[j].trainIdx;
+										pcloud[pt3d].imgpt_for_img[view] = matches[j].queryIdx;
+										found_in_other_view = true;
+										add_to_cloud[j] = 0;
+									}
 								}
 							}
 						}
 					}
 				}
-				if (found_in_other_view) {
-					found_other_views_count++;
-				} else {
-					add_to_cloud[j] = 1;
+#pragma omp critical
+				{
+					if (found_in_other_view) {
+						found_other_views_count++;
+					} else {
+						add_to_cloud[j] = 1;
+					}
 				}
 			}
-			std::cout << found_other_views_count << "/" << matches.size() << " points were found in other views, adding only " << cv::countNonZero(add_to_cloud) << " new\n";
+			std::cout << found_other_views_count << "/" << matches.size() << " points were found in other views, adding " << cv::countNonZero(add_to_cloud) << " new\n";
 
 			for (int j=0; j<add_to_cloud.size(); j++) {
 				if(add_to_cloud[j] == 1)

@@ -25,7 +25,10 @@
 
 #include <opencv2/core/core.hpp>
 
+#include <Eigen/Eigen>
+
 using namespace std;
+using namespace Eigen;
  
 void PopulatePCLPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& mycloud,
 						   const vector<cv::Point3d>& pointcloud, 
@@ -36,6 +39,64 @@ void PopulatePCLPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& mycloud
 #define pclp3(eigenv3f) pcl::PointXYZ(eigenv3f.x(),eigenv3f.y(),eigenv3f.z())
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,cloud1,cloud_no_floor,orig_cloud;
+
+////////////////////////////////// Show Camera ////////////////////////////////////
+std::deque<pcl::PolygonMesh>	cam_meshes;
+std::deque<std::vector<Matrix<float,6,1> > >	linesToShow;
+HANDLE							hIOMutexCam;
+bool							bShowCam;
+int								iCamCounter = 0;
+int								iLineCounter = 0;
+int								ipolygon[18] = {0,1,2,  0,3,1,  0,4,3,  0,2,4,  3,1,4,   2,4,1};
+
+inline pcl::PointXYZ Eigen2PointXYZ(Eigen::Vector3f v) { return pcl::PointXYZ(v[0],v[1],v[2]); }
+inline pcl::PointXYZRGB Eigen2PointXYZRGB(Eigen::Vector3f v, Eigen::Vector3f rgb) { pcl::PointXYZRGB p(rgb[0],rgb[1],rgb[2]); p.x = v[0]; p.y = v[1]; p.z = v[2]; return p; }
+inline pcl::PointNormal Eigen2PointNormal(Eigen::Vector3f v, Eigen::Vector3f n) { pcl::PointNormal p; p.x=v[0];p.y=v[1];p.z=v[2];p.normal_x=n[0];p.normal_y=n[1];p.normal_z=n[2]; return p;}
+inline float* Eigen2float6(Eigen::Vector3f v, Eigen::Vector3f rgb) { static float buf[6]; buf[0]=v[0];buf[1]=v[1];buf[2]=v[2];buf[3]=rgb[0];buf[4]=rgb[1];buf[5]=rgb[2]; return buf; }
+inline Matrix<float,6,1> Eigen2Eigen(Vector3f v, Vector3f rgb) { return (Matrix<float,6,1>() << v[0],v[1],v[2],rgb[0],rgb[1],rgb[2]).finished(); }
+inline std::vector<Matrix<float,6,1>> AsVector(const Matrix<float,6,1>& p1, const Matrix<float,6,1>& p2) { 	std::vector<Matrix<float,6,1>> v(2); v[0] = p1; v[1] = p2; return v; }
+
+void visualizerShowCamera(const Matrix3f& R, const Vector3f& t, float r, float g, float b, double s = 0.01 /*downscale factor*/) {
+
+	Vector3f vright = R.row(0).normalized() * s;
+	Vector3f vup = -R.row(1).normalized() * s;
+	Vector3f vforward = R.row(2).normalized() * s;
+
+	Vector3f rgb(r,g,b);
+
+	pcl::PointCloud<pcl::PointXYZRGB> mesh_cld;
+	mesh_cld.push_back(Eigen2PointXYZRGB(t,rgb));
+	mesh_cld.push_back(Eigen2PointXYZRGB(t + vforward + vright/2.0 + vup/2.0,rgb));
+	mesh_cld.push_back(Eigen2PointXYZRGB(t + vforward + vright/2.0 - vup/2.0,rgb));
+	mesh_cld.push_back(Eigen2PointXYZRGB(t + vforward - vright/2.0 + vup/2.0,rgb));
+	mesh_cld.push_back(Eigen2PointXYZRGB(t + vforward - vright/2.0 - vup/2.0,rgb));
+
+
+	WaitForSingleObject( hIOMutexCam, INFINITE );
+	pcl::PolygonMesh pm;
+	pm.polygons.resize(6); 
+	for(int i=0;i<6;i++)
+		for(int _v=0;_v<3;_v++)
+			pm.polygons[i].vertices.push_back(ipolygon[i*3 + _v]);
+	pcl::toROSMsg(mesh_cld,pm.cloud);
+	bShowCam = true;
+	cam_meshes.push_back(pm);
+	ReleaseMutex( hIOMutexCam );
+
+	linesToShow.push_back(
+		AsVector(Eigen2Eigen(t,rgb),Eigen2Eigen(t + vforward*3.0,rgb))
+		);
+}
+void visualizerShowCamera(const float R[9], const float t[3], float r, float g, float b) {
+	visualizerShowCamera(Matrix3f(R).transpose(),Vector3f(t),r,g,b);
+}
+void visualizerShowCamera(const float R[9], const float t[3], float r, float g, float b, double s) {
+	visualizerShowCamera(Matrix3f(R).transpose(),Vector3f(t),r,g,b,s);
+}
+void visualizerShowCamera(const cv::Matx33f& R, const cv::Vec3f& t, float r, float g, float b, double s) {
+	visualizerShowCamera(Matrix3f(R.val).transpose(),Vector3f(t.val),r,g,b,s);
+}
+/////////////////////////////////////////////////////////////////////////////////
 
 void viewerOneOff (pcl::visualization::PCLVisualizer& viewer)
 {
@@ -134,10 +195,11 @@ void RunVisualization(const vector<cv::Point3d>& pointcloud,
 	PopulatePCLPointCloud(cloud1,pointcloud1,pointcloud1_RGB);
 	copyPointCloud(*cloud,*orig_cloud);
 	
-    pcl::visualization::CloudViewer viewer("Cloud Viewer");
+    //pcl::visualization::CloudViewer viewer("Cloud Viewer");
+	pcl::visualization::PCLVisualizer viewer("SfMToyLibrary Viewe");
     
     //blocks until the cloud is actually rendered
-    viewer.showCloud(orig_cloud,"orig");
+	viewer.addPointCloud(orig_cloud,"orig");
 	
 	viewer.registerKeyboardCallback (keyboardEventOccurred, (void*)&viewer);
 	
@@ -145,12 +207,38 @@ void RunVisualization(const vector<cv::Point3d>& pointcloud,
     {
 		if (show_cloud) {
 			cout << "Show cloud\n";
-			if(show_cloud_A)
-				viewer.showCloud(cloud,"orig");
-			else
-				viewer.showCloud(cloud1,"orig");
+			if(show_cloud_A) {
+				viewer.removePointCloud("orig");
+				viewer.addPointCloud(cloud,"orig");
+			} else {
+				viewer.removePointCloud("orig");
+				viewer.addPointCloud(cloud1,"orig");
+			}
 			show_cloud = false;
 		}
+		if(cam_meshes.size() > 0) {
+			int num_cams = cam_meshes.size();
+			cout << "showing " << num_cams << " cameras" << endl;
+			while(cam_meshes.size()>0) {
+				stringstream ss; ss<<"camera"<<iCamCounter++;
+				viewer.addPolygonMesh(cam_meshes.front(),ss.str());
+				cam_meshes.pop_front();
+			}
+		}
+		if(linesToShow.size() > 0) {
+			cout << "showing " << linesToShow.size() << " lines" << endl;
+			while(linesToShow.size()>0) {
+				vector<Matrix<float,6,1> > oneline = linesToShow.front();
+				stringstream ss; ss<<"linesToShow"<<iLineCounter++;
+				pcl::PointXYZRGB	A(oneline[0][3],oneline[0][4],oneline[0][5]),
+									B(oneline[1][3],oneline[1][4],oneline[1][5]);
+				for(int j=0;j<3;j++) {A.data[j] = oneline[0][j]; B.data[j] = oneline[1][j];}
+				viewer.addLine<pcl::PointXYZRGB,pcl::PointXYZRGB>(A,B,ss.str());
+				linesToShow.pop_front();
+			} 
+			linesToShow.clear();
+		}
+		viewer.spinOnce();
     }
 }	
 
