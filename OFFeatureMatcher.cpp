@@ -27,8 +27,8 @@ OFFeatureMatcher::OFFeatureMatcher(std::vector<cv::Mat>& imgs_,
 imgpts(imgpts_), imgs(imgs_)
 {
 	//detect keypoints for all images
-	//FastFeatureDetector ffd;
-	DenseFeatureDetector ffd;
+	FastFeatureDetector ffd;
+//	DenseFeatureDetector ffd;
 	ffd.detect(imgs, imgpts);
 }
 
@@ -80,7 +80,7 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 	//	
 	//}
 
-#if 1
+#if 0
 #ifdef __SFM__DEBUG__
 	{
 		// draw flow field

@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 	{
 		vector<cv::Point3d> cld = distance->getPointCloud();
 		cv::Mat_<double> cldm(cld.size(),3);
-		for(int i=0;i<cld.size();i++) {
+		for(unsigned int i=0;i<cld.size();i++) {
 			cldm.row(i)(0) = cld[i].x;
 			cldm.row(i)(1) = cld[i].y;
 			cldm.row(i)(2) = cld[i].z;
@@ -85,10 +85,13 @@ int main(int argc, char** argv) {
 		cv::Mat_<double> mean;
 		cv::PCA pca(cldm,mean,CV_PCA_DATA_AS_ROW);
 		scale_cameras_down = pca.eigenvalues.at<double>(0);
+		if (scale_cameras_down > 1.0) {
+			scale_cameras_down = 1.0/scale_cameras_down;
+		}
 	}
 
 	vector<cv::Matx34d> v = distance->getCameras();
-	for(int i=0;i<v.size();i++) {
+	for(unsigned int i=0;i<v.size();i++) {
 		cv::Matx33f R; 
 		R(0,0)=v[i](0,0); R(0,1)=v[i](0,1); R(0,2)=v[i](0,2);
 		R(1,0)=v[i](1,0); R(1,1)=v[i](1,1); R(1,2)=v[i](1,2);

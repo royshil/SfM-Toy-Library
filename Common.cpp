@@ -12,6 +12,10 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 
+#ifndef WIN32
+#include <dirent.h>
+#endif
+
 using namespace std;
 using namespace cv;
 
@@ -112,15 +116,17 @@ bool hasEndingLower (string const &fullString_, string const &ending)
     }
 }
 
-#ifndef WIN32
-//open a directory the POSIX way
-#include <dirent.h>
-
-void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names) {
+void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor) {
 	if (dir_name == NULL) {
 		return;
 	}
+
+	string dir_name_ = string(dir_name);
 	vector<string> files_;
+
+#ifndef WIN32
+//open a directory the POSIX way
+
 	DIR *dp;
 	struct dirent *ep;     
 	dp = opendir (dir_name);
@@ -138,24 +144,12 @@ void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std
 		cerr << ("Couldn't open the directory");
 		return;
 	}
-	for (unsigned int i=0; i<files_.size(); i++) {
-		if (files_[i][0] == '.' || !(hasEndingLower(files_[i],"jpg")||hasEndingLower(files_[i],"png"))) {
-			continue;
-		}
-		cv::Mat m_ = cv::imread(string(dir_name) + "/" + files_[i]);
-		images_names.push_back(files_[i]);
-		images.push_back(m_);
-	}
-}
 
 #else
 //open a directory the WIN32 way
-void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor) {
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 	WIN32_FIND_DATA fdata;
-	vector<string> files_;
 
-	string dir_name_ = string(dir_name);
 	if(dir_name_[dir_name_.size()-1] == '\\' || dir_name_[dir_name_.size()-1] == '/') {
 		dir_name_ = dir_name_.substr(0,dir_name_.size()-1);
 	}
@@ -193,7 +187,8 @@ void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std
 
 	FindClose(hFind);
 	hFind = INVALID_HANDLE_VALUE;
-
+#endif
+	
 	for (unsigned int i=0; i<files_.size(); i++) {
 		if (files_[i][0] == '.' || !(hasEndingLower(files_[i],"jpg")||hasEndingLower(files_[i],"png"))) {
 			continue;
@@ -204,5 +199,6 @@ void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std
 		images_names.push_back(files_[i]);
 		images.push_back(m_);
 	}
+		
+
 }
-#endif

@@ -34,18 +34,24 @@ set(FLTK_LIBRARIES fltk3 fltk3gl)
 
 IF(APPLE)
 	set( COCOA_LIBS ${CMAKE_OSX_SYSROOT}/System/Library/Frameworks/Cocoa.framework )
-	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -F/usr/local/lib -L/opt/local/lib")
+	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -F/usr/local/lib -L/opt/local/lib -fopenmp")
 ENDIF(APPLE)
-
-include_directories(${PCL_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS} ${FLTK_LIB_DIR})
-add_definitions(${PCL_DEFINITIONS})
-include_directories(${FLTK_INCLUDE_DIR})
 
 set(SSBA_LIBRARY_DIR SSBA_LIBRARY_DIR-NOT_FOUND CACHE PATH "Directory to find SSBA libs")
 
-link_directories(${SSBA_LIBRARY_DIR})
-include_directories(${SSBA_LIBRARY_DIR}/../)
+link_directories(
+	${PCL_LIBRARY_DIRS} 
+	${FLTK_LIB_DIR} 
+	${SSBA_LIBRARY_DIR}
+	)
+	
+add_definitions(${PCL_DEFINITIONS})
+
+include_directories(
+	${FLTK_INCLUDE_DIR} 
+	${PCL_INCLUDE_DIRS} 
+	${SSBA_LIBRARY_DIR}/../
+	)
 
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
 
@@ -69,10 +75,15 @@ file(GLOB SFM_LIB_SOURCES
 add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )
 target_link_libraries(SfMToyLibrary 
 	V3D 
-	COLAMD)
+	COLAMD
+	)
 
 if(MSVC)
 	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "/openmp")
+endif()
+if(APPLE)
+	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "-fopenmp")
+	set_target_properties(SfMToyLibrary PROPERTIES LINK_FLAGS "-fopenmp")
 endif()
 
 # GUI part
@@ -103,6 +114,7 @@ target_link_libraries(SfMToyUI
 	${OpenCV_LIBS}
 	${PCL_LIBRARIES}
 	)
+	
 
 IF(APPLE)
 	target_link_libraries(SfMToyUI ${COCOA_LIBS})

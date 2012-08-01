@@ -13,13 +13,19 @@
 
 #include "Common.h"
 
-#undef __SFM__DEBUG__
+//#undef __SFM__DEBUG__
+
+bool CheckCoherentRotation(cv::Mat_<double>& R);
 
 cv::Mat GetFundamentalMat(const std::vector<cv::KeyPoint>& imgpts1,
 					   const std::vector<cv::KeyPoint>& imgpts2,
 					   std::vector<cv::KeyPoint>& imgpts1_good,
 					   std::vector<cv::KeyPoint>& imgpts2_good,
-					   std::vector<cv::DMatch>& matches);
+					   std::vector<cv::DMatch>& matches
+#ifdef __SFM__DEBUG__
+						  ,const cv::Mat& = cv::Mat(), const cv::Mat& = cv::Mat()
+#endif
+						  );
 
 bool FindCameraMatrices(const cv::Mat& K, 
 						const cv::Mat& Kinv, 

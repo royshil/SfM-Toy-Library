@@ -44,6 +44,12 @@ bool CheckCoherentRotation(cv::Mat_<double>& R) {
 	//	cout << "flip right vector" << endl;
 	//	eR.row(0) = -eR.row(0);
 	//}
+	
+	if(fabsf(determinant(R))-1.0 > 1e-09) {
+		cerr << "det(R) != +-1.0, this is not a rotation matrix" << endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -51,7 +57,13 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 					   const vector<KeyPoint>& imgpts2,
 					   vector<KeyPoint>& imgpts1_good,
 					   vector<KeyPoint>& imgpts2_good,
-					   vector<DMatch>& matches) {
+					   vector<DMatch>& matches
+#ifdef __SFM__DEBUG__
+					  ,const Mat& img_1,
+					  const Mat& img_2
+#endif
+					  ) 
+{
 	//Try to eliminate keypoints based on the fundamental matrix
 	//(although this is not the proper way to do this)
 	vector<uchar> status(imgpts1.size());
@@ -91,7 +103,7 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 	}
 	
 	vector<DMatch> new_matches;
-	cout << "keeping " << countNonZero(status) << " / " << status.size() << endl;	
+	cout << "F keeping " << countNonZero(status) << " / " << status.size() << endl;	
 	for (unsigned int i=0; i<status.size(); i++) {
 		if (status[i]) 
 		{
@@ -127,6 +139,44 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 	return F;
 }
 
+void TakeSVDOfE(Mat& E, Mat& svd_u, Mat& svd_vt, Mat& svd_w) {
+#ifndef USE_EIGEN
+	SVD svd(E,SVD::MODIFY_A);
+	svd_u = svd.u;
+	svd_vt = svd.vt;
+	svd_w = svd.w;
+#else
+	cout << "Eigen3 SVD..\n";
+	Eigen::Matrix3f  e;   e << E(0,0), E(0,1), E(0,2),
+	E(1,0), E(1,1), E(1,2),
+	E(2,0), E(2,1), E(2,2);
+	Eigen::JacobiSVD<Eigen::MatrixXf> svd(e, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	Eigen::MatrixXf Esvd_u = svd.matrixU();
+	Eigen::MatrixXf Esvd_v = svd.matrixV();
+	svd_u = (Mat_<double>(3,3) << Esvd_u(0,0), Esvd_u(0,1), Esvd_u(0,2),
+						  Esvd_u(1,0), Esvd_u(1,1), Esvd_u(1,2), 
+						  Esvd_u(2,0), Esvd_u(2,1), Esvd_u(2,2)); 
+	Mat_<double> svd_v = (Mat_<double>(3,3) << Esvd_v(0,0), Esvd_v(0,1), Esvd_v(0,2),
+						  Esvd_v(1,0), Esvd_v(1,1), Esvd_v(1,2), 
+						  Esvd_v(2,0), Esvd_v(2,1), Esvd_v(2,2));
+	svd_vt = svd_v.t();
+	svd_w = (Mat_<double>(1,3) << svd.singularValues()[0] , svd.singularValues()[1] , svd.singularValues()[2]);
+#endif
+	
+	cout << "----------------------- SVD ------------------------\n";
+	cout << "U:\n"<<svd_u<<"\nW:\n"<<svd_w<<"\nVt:\n"<<svd_vt<<endl;
+	cout << "----------------------------------------------------\n";
+}
+
+bool TestTriangulation(const vector<CloudPoint>& pcloud) {
+	int count = 0;
+	for (int i=0; i<pcloud.size(); i++) {
+		count += pcloud[i].pt.z > 0 ? 1 : 0;
+	}
+	cout << count << "/" << pcloud.size() << " are in front of camera" << endl;
+	return (pcloud.size() - count) < 20; //allow only 20 "outliers"
+}
+
 bool FindCameraMatrices(const Mat& K, 
 						const Mat& Kinv, 
 						const vector<KeyPoint>& imgpts1,
@@ -148,39 +198,18 @@ bool FindCameraMatrices(const Mat& K,
 		cout << "Find camera matrices...";
 		double t = getTickCount();
 		
-		Mat F = GetFundamentalMat(imgpts1,imgpts2,imgpts1_good,imgpts2_good,matches);
+		Mat F = GetFundamentalMat(imgpts1,imgpts2,imgpts1_good,imgpts2_good,matches
+#ifdef __SFM__DEBUG__
+								  ,img_1,img_2
+#endif
+								  );
 		
 		//Essential matrix: compute then extract cameras [R|t]
 		Mat_<double> E = K.t() * F * K; //according to HZ (9.12)
 		//decompose E to P' , HZ (9.19)
 		{			
-			
-#ifndef USE_EIGEN
-			SVD svd(E,SVD::MODIFY_A);
-			Mat svd_u = svd.u;
-			Mat svd_vt = svd.vt;
-			Mat svd_w = svd.w;
-#else
-			cout << "Eigen3 SVD..\n";
-			Eigen::Matrix3f  e;   e << E(0,0), E(0,1), E(0,2),
-										E(1,0), E(1,1), E(1,2),
-										E(2,0), E(2,1), E(2,2);
-			Eigen::JacobiSVD<Eigen::MatrixXf> svd(e, Eigen::ComputeThinU | Eigen::ComputeThinV);
-			Eigen::MatrixXf Esvd_u = svd.matrixU();
-			Eigen::MatrixXf Esvd_v = svd.matrixV();
-			Mat_<double> svd_u = (Mat_<double>(3,3) << Esvd_u(0,0), Esvd_u(0,1), Esvd_u(0,2),
-														Esvd_u(1,0), Esvd_u(1,1), Esvd_u(1,2), 
-														Esvd_u(2,0), Esvd_u(2,1), Esvd_u(2,2)); 
-			Mat_<double> svd_v = (Mat_<double>(3,3) << Esvd_v(0,0), Esvd_v(0,1), Esvd_v(0,2),
-														Esvd_v(1,0), Esvd_v(1,1), Esvd_v(1,2), 
-														Esvd_v(2,0), Esvd_v(2,1), Esvd_v(2,2));
-			Mat svd_vt = svd_v.t();
-			Mat_<double> svd_w = (Mat_<double>(1,3) << svd.singularValues()[0] , svd.singularValues()[1] , svd.singularValues()[2]);
-#endif
-			
-			cout << "----------------------- SVD ------------------------\n";
-			cout << "U:\n"<<svd_u<<"\nW:\n"<<svd_w<<"\nVt:\n"<<svd_vt<<endl;
-			cout << "----------------------------------------------------\n";
+			Mat svd_u, svd_vt, svd_w;
+			TakeSVDOfE(E,svd_u,svd_vt,svd_w);
 
 			//check if first and second singular values are the same (as they should be)
 			double singular_values_ratio = fabsf(svd_w.at<double>(0) / svd_w.at<double>(1));
@@ -191,6 +220,13 @@ bool FindCameraMatrices(const Mat& K,
 				return false;
 			}
 			
+			//according to http://en.wikipedia.org/wiki/Essential_matrix#Properties_of_the_essential_matrix
+			if(fabsf(determinant(E)) > 1e-08) {
+				cout << "det(E) != 0 : " << determinant(E) << "\n";
+				P1 = 0;
+				return false;
+			}
+									
 			Matx33d W(0,-1,0,	//HZ 9.13
 					  1,0,0,
 					  0,0,1);
@@ -204,7 +240,16 @@ bool FindCameraMatrices(const Mat& K,
 				cout << "resulting rotation is not coherent\n";
 				P1 = 0;
 				return false;
-			}			
+			}
+			
+			if(determinant(R)+1.0 < 1e-09) {
+				//according to http://en.wikipedia.org/wiki/Essential_matrix#Showing_that_it_is_valid
+				cout << "det(R) == -1 ["<<determinant(R)<<"]: flip E's sign" << endl;
+				E = -E;
+				TakeSVDOfE(E, svd_u, svd_vt, svd_w);
+				R = svd_u * Mat(W) * svd_vt;
+				t = svd_u.col(2);
+			}
 			
 			P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
 						 R(1,0),	R(1,1),	R(1,2),	t(1),
@@ -213,11 +258,11 @@ bool FindCameraMatrices(const Mat& K,
 			
 			vector<CloudPoint> pcloud; vector<KeyPoint> corresp;
 			TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
-			Scalar X = mean(CloudPointsToPoints(pcloud));
-			cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
+//			Scalar X = mean(CloudPointsToPoints(pcloud));
+//			cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 			
 			//check if pointa are triangulated --in front-- of cameras for all 4 ambiguations
-			if (X(2) < 0) {
+			if (!TestTriangulation(pcloud)) {
 				t = -svd_u.col(2); //-u3
 				P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
 							 R(1,0),	R(1,1),	R(1,2),	t(1),
@@ -226,10 +271,10 @@ bool FindCameraMatrices(const Mat& K,
 
 				pcloud.clear(); corresp.clear();
 				TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
-				X = mean(CloudPointsToPoints(pcloud));
-				cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
+//				X = mean(CloudPointsToPoints(pcloud));
+//				cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 				
-				if (X(2) < 0) {
+				if (!TestTriangulation(pcloud)) {
 					t = svd_u.col(2); //u3
 					R = svd_u * Mat(Wt) * svd_vt; //UWtVt
 					P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
@@ -239,10 +284,10 @@ bool FindCameraMatrices(const Mat& K,
 
 					pcloud.clear(); corresp.clear();
 					TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
-					X = mean(CloudPointsToPoints(pcloud));
-					cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
+//					X = mean(CloudPointsToPoints(pcloud));
+//					cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 					
-					if (X(2) < 0) {
+					if (!TestTriangulation(pcloud)) {
 						t = -svd_u.col(2);//-u3
 						P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
 									 R(1,0),	R(1,1),	R(1,2),	t(1),
@@ -251,11 +296,12 @@ bool FindCameraMatrices(const Mat& K,
 
 						pcloud.clear(); corresp.clear();
 						TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
-						X = mean(CloudPointsToPoints(pcloud));
-						cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
+//						X = mean(CloudPointsToPoints(pcloud));
+//						cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 						
-						if (X(2) < 0) {
-							cout << "Shit." << endl; exit(0);
+						if (!TestTriangulation(pcloud)) {
+							cout << "Shit." << endl; 
+							return false;
 						}
 					}				
 				}			

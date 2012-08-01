@@ -62,7 +62,7 @@ namespace
 void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud, 
 								  const Mat& cam_matrix,
 								  const std::vector<std::vector<cv::KeyPoint> >& imgpts,
-								  std::map<std::pair<int,int> ,cv::Matx34d>& Pmats
+								  std::map<int ,cv::Matx34d>& Pmats
 								) 
 {
 	int N = Pmats.size(), M = pointcloud.size();
@@ -120,7 +120,7 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 		Matrix3x3d R;
 		Vector3d T;
 		
-		Matx34d& P = Pmats[make_pair(0, i)];
+		Matx34d& P = Pmats[i];
 		
 		R[0][0] = P(0,0); R[0][1] = P(0,1); R[0][2] = P(0,2); T[0] = P(0,3);
 		R[1][0] = P(1,0); R[1][1] = P(1,1); R[1][2] = P(1,2); T[1] = P(1,3);

@@ -30,7 +30,7 @@ protected:
 	std::vector<cv::Mat> imgs;
 	std::vector<std::string> imgs_names;
 	
-	std::map<std::pair<int,int> ,cv::Matx34d> Pmats;
+	std::map<int,cv::Matx34d> Pmats;
 
 	cv::Mat K;
 	cv::Mat_<double> Kinv;
@@ -54,7 +54,7 @@ public:
 	const std::vector<cv::Vec3b>& getPointCloudRGB() { return pointCloudRGB; }
 	std::vector<cv::Matx34d> getCameras() { 
 		std::vector<cv::Matx34d> v; 
-		for(std::map<std::pair<int,int> ,cv::Matx34d>::const_iterator it = Pmats.begin(); it != Pmats.end(); ++it ) {
+		for(std::map<int ,cv::Matx34d>::const_iterator it = Pmats.begin(); it != Pmats.end(); ++it ) {
 			v.push_back( it->second );
 		}
 		return v;
@@ -66,5 +66,5 @@ public:
 		const std::vector<std::string>& imgs_names_, 
 		const std::string& imgs_path_);	
 	virtual void OnlyMatchFeatures(int strategy = STRATEGY_USE_FEATURE_MATCH);	
-	bool CheckCoherentRotation(cv::Mat_<double>& R);
+//	bool CheckCoherentRotation(cv::Mat_<double>& R);
 };

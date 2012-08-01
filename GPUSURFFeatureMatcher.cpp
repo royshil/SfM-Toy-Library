@@ -49,8 +49,8 @@ GPUSURFFeatureMatcher::GPUSURFFeatureMatcher(vector<cv::Mat>& imgs_,
 void GPUSURFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* matches) {
 	
 #ifdef __SFM__DEBUG__
-	const Mat& img_1 = imgs[idx_i];
-	const Mat& img_2 = imgs[idx_j];
+	Mat img_1; imgs[idx_i].download(img_1);
+	Mat img_2; imgs[idx_j].download(img_2);
 #endif
 	const vector<KeyPoint>& imgpts1 = imgpts[idx_i];
 	const vector<KeyPoint>& imgpts2 = imgpts[idx_j];

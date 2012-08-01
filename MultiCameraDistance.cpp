@@ -50,9 +50,10 @@ imgs_names(imgs_names_),features_matched(false),use_rich_features(true),use_gpu(
 	} else {
 		//no calibration matrix file - mockup calibration
 		cv::Size imgs_size = imgs_[0].size();
-		cam_matrix = (cv::Mat_<double>(3,3) << imgs_size.height , 0 , imgs_size.width/2.0,
-					  0, imgs_size.height, imgs_size.height/2.0,
-					  0, 0, 1);
+		double max_w_h = MAX(imgs_size.height,imgs_size.width);
+		cam_matrix = (cv::Mat_<double>(3,3) <<	max_w_h ,	0	,		imgs_size.width/2.0,
+												0,			max_w_h,	imgs_size.height/2.0,
+												0,			0,			1);
 		distortion_coeff = cv::Mat_<double>::zeros(1,4);
 	}
 	
@@ -112,13 +113,13 @@ void MultiCameraDistance::OnlyMatchFeatures(int strategy)
 	features_matched = true;
 }
 
-bool MultiCameraDistance::CheckCoherentRotation(cv::Mat_<double>& R) {
-//	std::cout << "R; " << R << std::endl;
-	double s = cv::norm(R,cv::Mat_<double>::eye(3,3),cv::NORM_L1);
-//	std::cout << "Distance from I: " << s << std::endl;
-	if (s > 2.3) { // norm of R from I is large -> probably bad rotation
-		std::cout << "rotation is probably not coherent.." << std::endl;
-		return false;	//skip triangulation
-	}
-	return true;
-}
+//bool MultiCameraDistance::CheckCoherentRotation(cv::Mat_<double>& R) {
+////	std::cout << "R; " << R << std::endl;
+//	double s = cv::norm(R,cv::Mat_<double>::eye(3,3),cv::NORM_L1);
+////	std::cout << "Distance from I: " << s << std::endl;
+//	if (s > 2.3) { // norm of R from I is large -> probably bad rotation
+//		std::cout << "rotation is probably not coherent.." << std::endl;
+//		return false;	//skip triangulation
+//	}
+//	return true;
+//}

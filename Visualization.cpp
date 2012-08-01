@@ -43,7 +43,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,cloud1,cloud_no_floor,orig_cloud;
 ////////////////////////////////// Show Camera ////////////////////////////////////
 std::deque<pcl::PolygonMesh>	cam_meshes;
 std::deque<std::vector<Matrix<float,6,1> > >	linesToShow;
-HANDLE							hIOMutexCam;
+//TODO define mutex
 bool							bShowCam;
 int								iCamCounter = 0;
 int								iLineCounter = 0;
@@ -54,7 +54,7 @@ inline pcl::PointXYZRGB Eigen2PointXYZRGB(Eigen::Vector3f v, Eigen::Vector3f rgb
 inline pcl::PointNormal Eigen2PointNormal(Eigen::Vector3f v, Eigen::Vector3f n) { pcl::PointNormal p; p.x=v[0];p.y=v[1];p.z=v[2];p.normal_x=n[0];p.normal_y=n[1];p.normal_z=n[2]; return p;}
 inline float* Eigen2float6(Eigen::Vector3f v, Eigen::Vector3f rgb) { static float buf[6]; buf[0]=v[0];buf[1]=v[1];buf[2]=v[2];buf[3]=rgb[0];buf[4]=rgb[1];buf[5]=rgb[2]; return buf; }
 inline Matrix<float,6,1> Eigen2Eigen(Vector3f v, Vector3f rgb) { return (Matrix<float,6,1>() << v[0],v[1],v[2],rgb[0],rgb[1],rgb[2]).finished(); }
-inline std::vector<Matrix<float,6,1>> AsVector(const Matrix<float,6,1>& p1, const Matrix<float,6,1>& p2) { 	std::vector<Matrix<float,6,1>> v(2); v[0] = p1; v[1] = p2; return v; }
+inline std::vector<Matrix<float,6,1> > AsVector(const Matrix<float,6,1>& p1, const Matrix<float,6,1>& p2) { 	std::vector<Matrix<float,6,1> > v(2); v[0] = p1; v[1] = p2; return v; }
 
 void visualizerShowCamera(const Matrix3f& R, const Vector3f& t, float r, float g, float b, double s = 0.01 /*downscale factor*/) {
 
@@ -71,8 +71,7 @@ void visualizerShowCamera(const Matrix3f& R, const Vector3f& t, float r, float g
 	mesh_cld.push_back(Eigen2PointXYZRGB(t + vforward - vright/2.0 + vup/2.0,rgb));
 	mesh_cld.push_back(Eigen2PointXYZRGB(t + vforward - vright/2.0 - vup/2.0,rgb));
 
-
-	WaitForSingleObject( hIOMutexCam, INFINITE );
+	//TODO Mutex acquire
 	pcl::PolygonMesh pm;
 	pm.polygons.resize(6); 
 	for(int i=0;i<6;i++)
@@ -81,7 +80,7 @@ void visualizerShowCamera(const Matrix3f& R, const Vector3f& t, float r, float g
 	pcl::toROSMsg(mesh_cld,pm.cloud);
 	bShowCam = true;
 	cam_meshes.push_back(pm);
-	ReleaseMutex( hIOMutexCam );
+	//TODO mutex release
 
 	linesToShow.push_back(
 		AsVector(Eigen2Eigen(t,rgb),Eigen2Eigen(t + vforward*3.0,rgb))

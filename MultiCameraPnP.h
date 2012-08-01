@@ -34,6 +34,7 @@ public:
 	
 private:
 	void GetBaseLineTriangulation();
+	int first_view;
 	int second_view; //baseline's second view other to 0
 	std::vector<CloudPoint> pcloud;
 };
