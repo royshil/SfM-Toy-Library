@@ -43,15 +43,20 @@ int main(int argc, char** argv) { //test with real photos
 
 int main(int argc, char** argv) {
 	if (argc < 2) {
-		cerr << "USAGE: " << argv[0] << " <path_to_images> [use rich features (RICH/OF) = RICH] [use GPU (GPU/CPU) = GPU]" << endl;
+		cerr << "USAGE: " << argv[0] << " <path_to_images> [use rich features (RICH/OF) = RICH] [use GPU (GPU/CPU) = GPU] [downscale factor = 1.0]" << endl;
 		return 0;
 	}
 	
-	open_imgs_dir(argv[1],images,images_names);
+	double downscale_factor = 1.0;
+	if(argc >= 5)
+		downscale_factor = atof(argv[4]);
+
+	open_imgs_dir(argv[1],images,images_names,downscale_factor);
 	if(images.size() == 0) { 
 		cerr << "can't get image files" << endl;
 		return 1;
 	}
+
 	
 	cv::Ptr<MultiCameraPnP> distance = new MultiCameraPnP(images,images_names,string(argv[1]));
 	if(argc < 3)
@@ -66,13 +71,29 @@ int main(int argc, char** argv) {
 	
 
 	distance->RecoverDepthFromImages();
+
+	//get the scale of the result cloud using PCA
+	double scale_cameras_down = 1.0;
+	{
+		vector<cv::Point3d> cld = distance->getPointCloud();
+		cv::Mat_<double> cldm(cld.size(),3);
+		for(int i=0;i<cld.size();i++) {
+			cldm.row(i)(0) = cld[i].x;
+			cldm.row(i)(1) = cld[i].y;
+			cldm.row(i)(2) = cld[i].z;
+		}
+		cv::Mat_<double> mean;
+		cv::PCA pca(cldm,mean,CV_PCA_DATA_AS_ROW);
+		scale_cameras_down = pca.eigenvalues.at<double>(0);
+	}
+
 	vector<cv::Matx34d> v = distance->getCameras();
 	for(int i=0;i<v.size();i++) {
 		cv::Matx33f R; 
 		R(0,0)=v[i](0,0); R(0,1)=v[i](0,1); R(0,2)=v[i](0,2);
 		R(1,0)=v[i](1,0); R(1,1)=v[i](1,1); R(1,2)=v[i](1,2);
 		R(2,0)=v[i](2,0); R(2,1)=v[i](2,1); R(2,2)=v[i](2,2);
-		visualizerShowCamera(R,cv::Vec3f(v[i](0,3),v[i](1,3),v[i](2,3)),255,0,0,1.0);
+		visualizerShowCamera(R,cv::Vec3f(v[i](0,3),v[i](1,3),v[i](2,3)),255,0,0,scale_cameras_down);
 	}
 	
 	RunVisualization(distance->getPointCloud(), 

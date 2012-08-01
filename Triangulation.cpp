@@ -131,7 +131,7 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 	vector<double> reproj_error;
 	unsigned int pts_size = pt_set1.size();
 #pragma omp parallel for
-	for (unsigned int i=0; i<pts_size; i++) {
+	for (int i=0; i<pts_size; i++) {
 		Point2f kp = pt_set1[i].pt; 
 		Point3d u(kp.x,kp.y,1.0);
 		Mat_<double> um = Kinv * Mat_<double>(u); 

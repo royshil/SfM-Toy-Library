@@ -28,7 +28,7 @@ void GetAlignedPointsFromMatch(const std::vector<cv::KeyPoint>& imgpts1,
 							   std::vector<cv::KeyPoint>& pt_set1,
 							   std::vector<cv::KeyPoint>& pt_set2);
 
-void drawArrows(cv::Mat& frame, const std::vector<cv::Point2f>& prevPts, const std::vector<cv::Point2f>& nextPts, const std::vector<uchar>& status, cv::Scalar line_color = cv::Scalar(0, 0, 255));
+void drawArrows(cv::Mat& frame, const std::vector<cv::Point2f>& prevPts, const std::vector<cv::Point2f>& nextPts, const std::vector<uchar>& status, const std::vector<float>& verror, cv::Scalar line_color = cv::Scalar(0, 0, 255));
 
 #define CV_PROFILE(code)	{\
 							double t = (double)cv::getTickCount();\
@@ -36,4 +36,4 @@ void drawArrows(cv::Mat& frame, const std::vector<cv::Point2f>& prevPts, const s
 							cout << "DONE " << ((double)cv::getTickCount() - t)/cv::getTickFrequency() << "s" << endl;\
 							}
 
-void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names);
+void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor);

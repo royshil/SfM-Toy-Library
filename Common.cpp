@@ -9,6 +9,7 @@
 
 #include "Common.h"
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 
 using namespace std;
@@ -45,12 +46,19 @@ void PointsToKeyPoints(const vector<Point2f>& ps, vector<KeyPoint>& kps) {
 	for (unsigned int i=0; i<ps.size(); i++) kps.push_back(KeyPoint(ps[i],1.0f));
 }
 
-void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f>& nextPts, const vector<uchar>& status, Scalar line_color)
+#define intrpmnmx(val,min,max) (((val)-min)/(max-min))
+
+void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f>& nextPts, const vector<uchar>& status, const vector<float>& verror, Scalar _line_color)
 {
+	double minVal,maxVal; minMaxIdx(verror,&minVal,&maxVal,0,0,status);
     for (size_t i = 0; i < prevPts.size(); ++i)
     {
         if (status[i])
         {
+			Scalar line_color(
+				(1.0 - intrpmnmx(_line_color[0],minVal,maxVal))*255,
+				(1.0 - intrpmnmx(_line_color[1],minVal,maxVal))*255,
+				(1.0 - intrpmnmx(_line_color[2],minVal,maxVal))*255);
             int line_thickness = 1;
 			
             Point p = prevPts[i];
@@ -142,7 +150,7 @@ void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std
 
 #else
 //open a directory the WIN32 way
-void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names) {
+void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor) {
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 	WIN32_FIND_DATA fdata;
 	vector<string> files_;
@@ -191,6 +199,8 @@ void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std
 			continue;
 		}
 		cv::Mat m_ = cv::imread(string(dir_name_).append("/").append(files_[i]));
+		if(downscale_factor != 1.0)
+			cv::resize(m_,m_,Size(),downscale_factor,downscale_factor);
 		images_names.push_back(files_[i]);
 		images.push_back(m_);
 	}

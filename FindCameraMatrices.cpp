@@ -20,19 +20,30 @@ using namespace std;
 
 //#define USE_EIGEN 1
 
-#ifdef USE_EIGEN
-#include <eigen3/Eigen/Eigen>
-
-#endif
+#include <Eigen/Eigen>
 
 bool CheckCoherentRotation(cv::Mat_<double>& R) {
 	std::cout << "R; " << R << std::endl;
-	double s = cv::norm(cv::abs(R),cv::Mat_<double>::eye(3,3),cv::NORM_L1);
-	std::cout << "Distance from I: " << s << std::endl;
-	if (s > 2.3) { // norm of R from I is large -> probably bad rotation
-		std::cout << "rotation is probably not coherent.." << std::endl;
-		return false;	//skip triangulation
-	}
+	//double s = cv::norm(cv::abs(R),cv::Mat_<double>::eye(3,3),cv::NORM_L1);
+	//std::cout << "Distance from I: " << s << std::endl;
+	//if (s > 2.3) { // norm of R from I is large -> probably bad rotation
+	//	std::cout << "rotation is probably not coherent.." << std::endl;
+	//	return false;	//skip triangulation
+	//}
+	//Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> > eR(R[0]);
+	//if(eR(2,0) < -0.9)
+	//{
+	//	cout << "rotate 180deg (PI rad) on Y" << endl;
+
+	//	cout << "before" << endl << eR << endl;
+	//	Eigen::AngleAxisd aad(-M_PI/2.0,Eigen::Vector3d::UnitY());
+	//	eR *= aad.toRotationMatrix();
+	//	cout << "after" << endl << eR << endl;
+	//}
+	//if(eR(0,0) < -0.9) {
+	//	cout << "flip right vector" << endl;
+	//	eR.row(0) = -eR.row(0);
+	//}
 	return true;
 }
 

@@ -61,7 +61,10 @@ public:
     }
 
 
-	MultiCameraDistance(const std::vector<cv::Mat>& imgs_, const std::vector<std::string>& imgs_names_, const std::string& imgs_path_);	
+	MultiCameraDistance(
+		const std::vector<cv::Mat>& imgs_, 
+		const std::vector<std::string>& imgs_names_, 
+		const std::string& imgs_path_);	
 	virtual void OnlyMatchFeatures(int strategy = STRATEGY_USE_FEATURE_MATCH);	
 	bool CheckCoherentRotation(cv::Mat_<double>& R);
 };

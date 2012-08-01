@@ -13,7 +13,10 @@
 #include "GPUSURFFeatureMatcher.h"
 
 //c'tor
-MultiCameraDistance::MultiCameraDistance(const std::vector<cv::Mat>& imgs_, const std::vector<std::string>& imgs_names_, const std::string& imgs_path_):
+MultiCameraDistance::MultiCameraDistance(
+	const std::vector<cv::Mat>& imgs_, 
+	const std::vector<std::string>& imgs_names_, 
+	const std::string& imgs_path_):
 imgs_names(imgs_names_),features_matched(false),use_rich_features(true),use_gpu(true)
 {		
 	std::cout << "=========================== Load Images ===========================\n";

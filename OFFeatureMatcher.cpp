@@ -13,7 +13,10 @@
 
 #ifdef __SFM__DEBUG__
 #include <opencv2/highgui/highgui.hpp>
+#include <omp.h>
+#include <sstream>
 #endif
+
 
 using namespace std;
 using namespace cv;
@@ -24,7 +27,8 @@ OFFeatureMatcher::OFFeatureMatcher(std::vector<cv::Mat>& imgs_,
 imgpts(imgpts_), imgs(imgs_)
 {
 	//detect keypoints for all images
-	FastFeatureDetector ffd;
+	//FastFeatureDetector ffd;
+	DenseFeatureDetector ffd;
 	ffd.detect(imgs, imgpts);
 }
 
@@ -46,12 +50,12 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 						  
 	vector<uchar> vstatus; vector<float> verror;
 	calcOpticalFlowPyrLK(prevgray, gray, i_pts, j_pts, vstatus, verror);
-	
+
 	double thresh = 2.0;
 	for (unsigned int i=0; i<vstatus.size(); i++) {
-		if (vstatus[i]) {
+		if (vstatus[i] && verror[i] < 7.0) {
 #ifdef __SFM__DEBUG__
-			if (i%10==0 && verror[i] < 20.0) { //prune some matches for display purposes
+			if (i%10==0) { //prune some matches for display purposes
 				vstatus[i] = 1;
 			} else {
 				vstatus[i] = 0;
@@ -63,6 +67,8 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 					matches->push_back(DMatch(i,j,1.0));
 				}
 			}
+		} else {
+			vstatus[i] = 0;
 		}
 	}
 	
@@ -74,15 +80,16 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 	//	
 	//}
 
-#if 0
+#if 1
 #ifdef __SFM__DEBUG__
 	{
 		// draw flow field
 		Mat img_matches; cvtColor(imgs[idx_i],img_matches,CV_GRAY2BGR);
-		drawArrows(img_matches, i_pts, j_pts, vstatus, Scalar(0,255));
-		imshow( "Flow Field", img_matches );
-		waitKey(100);
-		destroyWindow("Flow Field");
+		drawArrows(img_matches, i_pts, j_pts, vstatus, verror, Scalar(0,255));
+		stringstream ss; ss << "flow field " << omp_get_thread_num();
+		imshow( ss.str(), img_matches );
+		waitKey(0);
+		destroyWindow(ss.str());
 	}
 #endif
 #endif
