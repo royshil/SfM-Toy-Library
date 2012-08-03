@@ -17,6 +17,7 @@
 #include <sstream>
 #endif
 
+#include <set>
 
 using namespace std;
 using namespace cv;
@@ -52,6 +53,7 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 	calcOpticalFlowPyrLK(prevgray, gray, i_pts, j_pts, vstatus, verror);
 
 	double thresh = 2.0;
+	std::set<int> found_in_imgpts_j;
 	for (unsigned int i=0; i<vstatus.size(); i++) {
 		if (vstatus[i] && verror[i] < 7.0) {
 #ifdef __SFM__DEBUG__
@@ -62,9 +64,15 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 			}
 #endif
 
-			for(int j=0;j<imgpts[idx_j].size();j++) {
-				if(norm(j_pts[i]-imgpts[idx_j][j].pt) < thresh) {
-					matches->push_back(DMatch(i,j,1.0));
+			bool found = false;
+			for(int j=0;j<imgpts[idx_j].size() && !found;j++) {
+				if (found_in_imgpts_j.find(j) == found_in_imgpts_j.end()) {
+					double _d = norm(j_pts[i]-imgpts[idx_j][j].pt);
+					if(_d < thresh) {
+						matches->push_back(DMatch(i,j,_d));
+						found_in_imgpts_j.insert(j);
+						found = true;
+					}
 				}
 			}
 		} else {
