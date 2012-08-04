@@ -64,6 +64,9 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 			}
 #endif
 
+
+			//TODO must support mutual-matching, cross-matching or ratio test
+			//or use patches for matching
 			bool found = false;
 			for(int j=0;j<imgpts[idx_j].size() && !found;j++) {
 				if (found_in_imgpts_j.find(j) == found_in_imgpts_j.end()) {

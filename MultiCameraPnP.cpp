@@ -168,16 +168,16 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 	
 		if(!use_gpu) {
 			vector<int> inliers;
-//			cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, false, 150, 10.0, 0.5 * imgPoints.size(), inliers, CV_EPNP);
-			cv::solvePnP(ppcloud, imgPoints, K, distcoeff, rvec, t, true);
+			cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, false, 150, 10.0, 0.5 * imgPoints.size(), inliers, CV_EPNP);
+			//cv::solvePnP(ppcloud, imgPoints, K, distcoeff, rvec, t, true, CV_EPNP);
 		
 			vector<cv::Point2f> projected3D;
 			cv::projectPoints(ppcloud, rvec, t, K, distcoeff, projected3D);
 
 			cv::Mat reprojected; imgs_orig[i].copyTo(reprojected);
-//			for (int ppt=0; ppt<inliers.size(); ppt++) {
-//				cv::line(reprojected,imgPoints[inliers[ppt]],projected3D[inliers[ppt]],cv::Scalar(0,0,255),1);
-//			}
+			for (int ppt=0; ppt<inliers.size(); ppt++) {
+				cv::line(reprojected,imgPoints[inliers[ppt]],projected3D[inliers[ppt]],cv::Scalar(0,0,255),1);
+			}
 			for(int ppt=0;ppt<imgPoints.size();ppt++) {
 				cv::line(reprojected,imgPoints[ppt],projected3D[ppt],cv::Scalar(0,0,255),1);
 			}
@@ -185,8 +185,8 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 				cv::circle(reprojected, imgPoints[ppt], 2, cv::Scalar(255,0,0), CV_FILLED);
 				cv::circle(reprojected, projected3D[ppt], 2, cv::Scalar(0,255,0), CV_FILLED);			
 			}
-//			stringstream ss; ss << "inliers " << inliers.size();
-//			putText(reprojected, ss.str(), cv::Point(5,20), CV_FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0,255,255), 2);
+			stringstream ss; ss << "inliers " << inliers.size();
+			putText(reprojected, ss.str(), cv::Point(5,20), CV_FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0,255,255), 2);
 						
 			cv::imshow("__tmp", reprojected);
 			cv::waitKey(0);
