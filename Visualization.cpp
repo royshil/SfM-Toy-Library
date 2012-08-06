@@ -23,6 +23,8 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/voxel_grid.h>
 
+#include <boost/thread.hpp>
+
 #include <opencv2/core/core.hpp>
 
 #include <Eigen/Eigen>
@@ -181,10 +183,20 @@ void keyboardEventOccurred (const pcl::visualization::KeyboardEvent& event_,
 	}
 }
 
+
 void RunVisualization(const vector<cv::Point3d>& pointcloud,
 					  const vector<cv::Vec3b>& pointcloud_RGB,
 					  const vector<cv::Point3d>& pointcloud1,
 					  const vector<cv::Vec3b>& pointcloud1_RGB) 
+{	
+	ShowClouds(pointcloud,pointcloud_RGB,pointcloud1,pointcloud1_RGB);
+	RunVisualizationOnly();	
+}
+
+void ShowClouds(const vector<cv::Point3d>& pointcloud,
+				const vector<cv::Vec3b>& pointcloud_RGB,
+				const vector<cv::Point3d>& pointcloud1,
+				const vector<cv::Vec3b>& pointcloud1_RGB) 
 {
 	cloud.reset(new pcl::PointCloud<pcl::PointXYZRGB>);
 	cloud1.reset(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -193,13 +205,13 @@ void RunVisualization(const vector<cv::Point3d>& pointcloud,
 	PopulatePCLPointCloud(cloud,pointcloud,pointcloud_RGB);
 	PopulatePCLPointCloud(cloud1,pointcloud1,pointcloud1_RGB);
 	copyPointCloud(*cloud,*orig_cloud);
-	
-    //pcl::visualization::CloudViewer viewer("Cloud Viewer");
+	show_cloud = true;
+	show_cloud_A = true;
+}
+
+void RunVisualizationOnly() {
 	pcl::visualization::PCLVisualizer viewer("SfMToyLibrary Viewe");
-    
-    //blocks until the cloud is actually rendered
-	viewer.addPointCloud(orig_cloud,"orig");
-	
+    	
 	viewer.registerKeyboardCallback (keyboardEventOccurred, (void*)&viewer);
 	
     while (!viewer.wasStopped ())
@@ -240,6 +252,11 @@ void RunVisualization(const vector<cv::Point3d>& pointcloud,
 		viewer.spinOnce();
     }
 }	
+
+void RunVisualizationThread() {
+	boost::thread* _t = new boost::thread(RunVisualizationOnly);
+}
+
 
 void PopulatePCLPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& mycloud,
 						   const vector<cv::Point3d>& pointcloud, 

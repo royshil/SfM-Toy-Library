@@ -130,7 +130,29 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 	double t = getTickCount();
 	vector<double> reproj_error;
 	unsigned int pts_size = pt_set1.size();
-#pragma omp parallel for
+	
+#if 1
+	vector<Point2f> _pt_set1_pt,_pt_set2_pt;
+	KeyPointsToPoints(pt_set1,_pt_set1_pt);
+	KeyPointsToPoints(pt_set2,_pt_set2_pt);
+	Mat pt_set1_pt,pt_set2_pt;
+	undistortPoints(_pt_set1_pt, pt_set1_pt, K, Mat());
+	undistortPoints(_pt_set2_pt, pt_set2_pt, K, Mat());
+	Mat pt_set1_pt_2r = pt_set1_pt.reshape(1, 2);
+	Mat pt_set2_pt_2r = pt_set2_pt.reshape(1, 2);
+	Mat pt_3d_h(1,pts_size,CV_32FC4);
+	cv::triangulatePoints(P,P1,pt_set1_pt_2r,pt_set2_pt_2r,pt_3d_h);
+	vector<Point3f> pt_3d;
+	convertPointsHomogeneous(pt_3d_h.reshape(4, 1), pt_3d);
+//	Vec3d rvec; Rodrigues(, <#OutputArray dst#>, <#OutputArray jacobian#>)
+//	projectPoints(pt_3d, , <#InputArray tvec#>, <#InputArray cameraMatrix#>, <#InputArray distCoeffs#>, <#OutputArray imagePoints#>, <#OutputArray jacobian#>, <#double aspectRatio#>)
+	for (int i=0; i<pts_size; i++) {
+		CloudPoint cp; 
+		cp.pt = pt_3d[i];
+		pointcloud.push_back(cp);
+	}
+#else
+#pragma omp parallel for num_threads(1)
 	for (int i=0; i<pts_size; i++) {
 		Point2f kp = pt_set1[i].pt; 
 		Point3d u(kp.x,kp.y,1.0);
@@ -167,6 +189,7 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 #endif
 		}
 	}
+#endif
 	
 	t = ((double)getTickCount() - t)/getTickFrequency();
 	cout << "Done. ("<<pointcloud.size()<<"points, " << t <<"s)"<< endl;

@@ -52,12 +52,12 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 	vector<uchar> vstatus; vector<float> verror;
 	calcOpticalFlowPyrLK(prevgray, gray, i_pts, j_pts, vstatus, verror);
 
-	double thresh = 2.0;
+	double thresh = 1.0;
 	std::set<int> found_in_imgpts_j;
 	for (unsigned int i=0; i<vstatus.size(); i++) {
-		if (vstatus[i] && verror[i] < 7.0) {
+		if (vstatus[i] && verror[i] < 9.0) {
 #ifdef __SFM__DEBUG__
-			if (i%10==0) { //prune some matches for display purposes
+			if (i%3==0) { //prune some matches for display purposes
 				vstatus[i] = 1;
 			} else {
 				vstatus[i] = 0;
@@ -99,7 +99,7 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 		drawArrows(img_matches, i_pts, j_pts, vstatus, verror, Scalar(0,255));
 		stringstream ss; ss << "flow field " << omp_get_thread_num();
 		imshow( ss.str(), img_matches );
-		waitKey(0);
+		waitKey(500);
 		destroyWindow(ss.str());
 	}
 #endif

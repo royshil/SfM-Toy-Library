@@ -168,7 +168,7 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 	
 		if(!use_gpu) {
 			vector<int> inliers;
-			cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, false, 150, 10.0, 0.5 * imgPoints.size(), inliers, CV_EPNP);
+			cv::solvePnPRansac(ppcloud, imgPoints, K, distcoeff, rvec, t, true, 350, 8.0, 0.5 * imgPoints.size(), inliers);
 			//cv::solvePnP(ppcloud, imgPoints, K, distcoeff, rvec, t, true, CV_EPNP);
 		
 			vector<cv::Point2f> projected3D;
@@ -190,6 +190,11 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 						
 			cv::imshow("__tmp", reprojected);
 			cv::waitKey(0);
+			
+			if(inliers.size() < imgPoints.size()/2) {
+				cerr << "not enough inliers to consider a good pose" << endl;
+				continue;
+			}
 		} else {
 			//use GPU ransac
 			//make sure datatstructures are cv::gpu compatible

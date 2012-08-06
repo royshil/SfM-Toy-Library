@@ -173,8 +173,8 @@ bool TestTriangulation(const vector<CloudPoint>& pcloud) {
 	for (int i=0; i<pcloud.size(); i++) {
 		count += pcloud[i].pt.z > 0 ? 1 : 0;
 	}
-	cout << count << "/" << pcloud.size() << " are in front of camera" << endl;
-	return (pcloud.size() - count) < 20; //allow only 20 "outliers"
+	cout << count << "/" << pcloud.size() << " = " << (count / pcloud.size())*100 << "% are in front of camera" << endl;
+	return (count / pcloud.size()) < 0.8; //allow only 20% "outliers"
 }
 
 bool FindCameraMatrices(const Mat& K, 
