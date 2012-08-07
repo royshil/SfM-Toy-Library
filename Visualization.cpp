@@ -41,6 +41,10 @@ void PopulatePCLPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& mycloud
 #define pclp3(eigenv3f) pcl::PointXYZ(eigenv3f.x(),eigenv3f.y(),eigenv3f.z())
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,cloud1,cloud_no_floor,orig_cloud;
+std::string cloud_to_show_name = "";
+bool show_cloud = false;
+bool sor_applied = false;
+bool show_cloud_A = true;
 
 ////////////////////////////////// Show Camera ////////////////////////////////////
 std::deque<pcl::PolygonMesh>	cam_meshes;
@@ -139,9 +143,6 @@ void SORFilter() {
 //	copyPointCloud(*cloud_filtered,*cloud);
 }	
 
-bool show_cloud = false;
-bool sor_applied = false;
-bool show_cloud_A = true;
 
 void keyboardEventOccurred (const pcl::visualization::KeyboardEvent& event_,
                             void* viewer_void)
@@ -209,6 +210,22 @@ void ShowClouds(const vector<cv::Point3d>& pointcloud,
 	show_cloud_A = true;
 }
 
+void ShowCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloud, const std::string& name) { 
+	cloud.reset(new pcl::PointCloud<pcl::PointXYZRGB>);
+	pcl::copyPointCloud(*_cloud,*cloud);
+	cloud_to_show_name = name;
+	show_cloud = true;
+	show_cloud_A = true;
+}
+
+void ShowCloud(const vector<cv::Point3d>& pointcloud,
+				const vector<cv::Vec3b>& pointcloud_RGB, 
+				const std::string& name) {
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr newcloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+	PopulatePCLPointCloud(newcloud,pointcloud,pointcloud_RGB);
+	ShowCloud(newcloud,name);
+}
+
 void RunVisualizationOnly() {
 	pcl::visualization::PCLVisualizer viewer("SfMToyLibrary Viewe");
     	
@@ -218,12 +235,17 @@ void RunVisualizationOnly() {
     {
 		if (show_cloud) {
 			cout << "Show cloud\n";
-			if(show_cloud_A) {
-				viewer.removePointCloud("orig");
-				viewer.addPointCloud(cloud,"orig");
+			if(cloud_to_show_name != "") {
+				viewer.removePointCloud(cloud_to_show_name);
+				viewer.addPointCloud(cloud,cloud_to_show_name);
 			} else {
-				viewer.removePointCloud("orig");
-				viewer.addPointCloud(cloud1,"orig");
+				if(show_cloud_A) {
+					viewer.removePointCloud("orig");
+					viewer.addPointCloud(cloud,"orig");
+				} else {
+					viewer.removePointCloud("orig");
+					viewer.addPointCloud(cloud1,"orig");
+				}
 			}
 			show_cloud = false;
 		}
@@ -253,8 +275,12 @@ void RunVisualizationOnly() {
     }
 }	
 
+boost::thread* _t = NULL;
 void RunVisualizationThread() {
-	boost::thread* _t = new boost::thread(RunVisualizationOnly);
+	_t = new boost::thread(RunVisualizationOnly);
+}
+void WaitForVisualizationThread() {
+	_t->join();
 }
 
 

@@ -42,6 +42,7 @@ cv::Mat_<double> IterativeLinearLSTriangulation(cv::Point3d u,	//homogenous imag
 double TriangulatePoints(const std::vector<cv::KeyPoint>& pt_set1, 
 					   const std::vector<cv::KeyPoint>& pt_set2, 
 					   const cv::Mat& Kinv,
+					   const cv::Mat& distcoeff,
 					   const cv::Matx34d& P,
 					   const cv::Matx34d& P1,
 					   std::vector<CloudPoint>& pointcloud,

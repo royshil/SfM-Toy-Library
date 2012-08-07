@@ -96,7 +96,7 @@ public:
 			OnlyMatchFeatures();
 		
 		std::vector<cv::DMatch> matches;
-		FindCameraMatrices(K, Kinv, imgpts1, imgpts2, imgpts1_good, imgpts2_good, P, P1, matches, pointcloud
+		FindCameraMatrices(K, Kinv, distortion_coeff, imgpts1, imgpts2, imgpts1_good, imgpts2_good, P, P1, matches, pointcloud
 #ifdef __SFM__DEBUG__
 						   ,left_im,right_im
 #endif
@@ -108,6 +108,6 @@ public:
 		std::vector<cv::KeyPoint> pt_set1,pt_set2;
 		GetAlignedPointsFromMatch(imgpts1,imgpts2,matches,pt_set1,pt_set2);
 		
-		TriangulatePoints(pt_set1, pt_set2, Kinv, P, P1, pointcloud, correspImg1Pt);
+		TriangulatePoints(pt_set1, pt_set2, Kinv,distortion_coeff, P, P1, pointcloud, correspImg1Pt);
 	}
 };

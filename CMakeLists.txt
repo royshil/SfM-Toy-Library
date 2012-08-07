@@ -70,6 +70,7 @@ file(GLOB SFM_LIB_SOURCES
 	OFFeatureMatcher.*
 	BundleAdjuster.*
 	GPUSURFFeatureMatcher.*
+	AbstractFeatureMatcher.*
 )
 
 add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )

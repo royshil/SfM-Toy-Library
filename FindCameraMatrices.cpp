@@ -131,7 +131,7 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 					vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );		
 		//-- Show detected matches
 		imshow( "Good Matches", img_matches );
-		waitKey(0);
+		waitKey(500);
 		destroyWindow("Good Matches");
 	}
 #endif		
@@ -173,12 +173,13 @@ bool TestTriangulation(const vector<CloudPoint>& pcloud) {
 	for (int i=0; i<pcloud.size(); i++) {
 		count += pcloud[i].pt.z > 0 ? 1 : 0;
 	}
-	cout << count << "/" << pcloud.size() << " = " << (count / pcloud.size())*100 << "% are in front of camera" << endl;
-	return (count / pcloud.size()) < 0.8; //allow only 20% "outliers"
+	cout << count << "/" << pcloud.size() << " = " << ((double)count / (double)pcloud.size())*100.0 << "% are in front of camera" << endl;
+	return (count / pcloud.size()) > 0.8; //allow only 20% "outliers"
 }
 
 bool FindCameraMatrices(const Mat& K, 
 						const Mat& Kinv, 
+						const Mat& distcoeff,
 						const vector<KeyPoint>& imgpts1,
 						const vector<KeyPoint>& imgpts2,
 						vector<KeyPoint>& imgpts1_good,
@@ -257,7 +258,7 @@ bool FindCameraMatrices(const Mat& K,
 			cout << "Testing P1 " << endl << Mat(P1) << endl;
 			
 			vector<CloudPoint> pcloud; vector<KeyPoint> corresp;
-			TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
+			TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
 //			Scalar X = mean(CloudPointsToPoints(pcloud));
 //			cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 			
@@ -270,7 +271,7 @@ bool FindCameraMatrices(const Mat& K,
 				cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 				pcloud.clear(); corresp.clear();
-				TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
+				TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
 //				X = mean(CloudPointsToPoints(pcloud));
 //				cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 				
@@ -283,7 +284,7 @@ bool FindCameraMatrices(const Mat& K,
 					cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 					pcloud.clear(); corresp.clear();
-					TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
+					TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
 //					X = mean(CloudPointsToPoints(pcloud));
 //					cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 					
@@ -295,7 +296,7 @@ bool FindCameraMatrices(const Mat& K,
 						cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 						pcloud.clear(); corresp.clear();
-						TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, P, P1, pcloud, corresp);
+						TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
 //						X = mean(CloudPointsToPoints(pcloud));
 //						cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
 						

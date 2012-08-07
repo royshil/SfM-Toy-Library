@@ -107,6 +107,7 @@ Mat_<double> IterativeLinearLSTriangulation(Point3d u,	//homogenous image point 
 double TriangulatePoints(const vector<KeyPoint>& pt_set1, 
 					   const vector<KeyPoint>& pt_set2, 
 					   const Mat& Kinv,
+					   const Mat& distcoeff,
 					   const Matx34d& P,
 					   const Matx34d& P1,
 					   vector<CloudPoint>& pointcloud,
@@ -131,25 +132,37 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 	vector<double> reproj_error;
 	unsigned int pts_size = pt_set1.size();
 	
-#if 1
+#if 0
+	//convert to Point2f
 	vector<Point2f> _pt_set1_pt,_pt_set2_pt;
 	KeyPointsToPoints(pt_set1,_pt_set1_pt);
 	KeyPointsToPoints(pt_set2,_pt_set2_pt);
+	
+	//undistort
 	Mat pt_set1_pt,pt_set2_pt;
 	undistortPoints(_pt_set1_pt, pt_set1_pt, K, Mat());
 	undistortPoints(_pt_set2_pt, pt_set2_pt, K, Mat());
+	
+	//triangulate
 	Mat pt_set1_pt_2r = pt_set1_pt.reshape(1, 2);
 	Mat pt_set2_pt_2r = pt_set2_pt.reshape(1, 2);
 	Mat pt_3d_h(1,pts_size,CV_32FC4);
 	cv::triangulatePoints(P,P1,pt_set1_pt_2r,pt_set2_pt_2r,pt_3d_h);
+
+	//calculate reprojection
 	vector<Point3f> pt_3d;
 	convertPointsHomogeneous(pt_3d_h.reshape(4, 1), pt_3d);
-//	Vec3d rvec; Rodrigues(, <#OutputArray dst#>, <#OutputArray jacobian#>)
-//	projectPoints(pt_3d, , <#InputArray tvec#>, <#InputArray cameraMatrix#>, <#InputArray distCoeffs#>, <#OutputArray imagePoints#>, <#OutputArray jacobian#>, <#double aspectRatio#>)
+	cv::Mat_<double> R = (cv::Mat_<double>(3,3) << P(0,0),P(0,1),P(0,2), P(1,0),P(1,1),P(1,2), P(2,0),P(2,1),P(2,2));
+	Vec3d rvec; Rodrigues(R ,rvec);
+	Vec3d tvec(P(0,3),P(1,3),P(2,3));
+	vector<Point2f> reprojected_pt_set1;
+	projectPoints(pt_3d,rvec,tvec,K,distcoeff,reprojected_pt_set1);
+
 	for (int i=0; i<pts_size; i++) {
 		CloudPoint cp; 
 		cp.pt = pt_3d[i];
 		pointcloud.push_back(cp);
+		reproj_error.push_back(norm(_pt_set1_pt[i]-reprojected_pt_set1[i]));
 	}
 #else
 #pragma omp parallel for num_threads(1)

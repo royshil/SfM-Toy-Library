@@ -13,6 +13,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <vector>
+#include <iostream>
 
 struct CloudPoint {
 	cv::Point3d pt;
@@ -32,10 +33,11 @@ void GetAlignedPointsFromMatch(const std::vector<cv::KeyPoint>& imgpts1,
 
 void drawArrows(cv::Mat& frame, const std::vector<cv::Point2f>& prevPts, const std::vector<cv::Point2f>& nextPts, const std::vector<uchar>& status, const std::vector<float>& verror, cv::Scalar line_color = cv::Scalar(0, 0, 255));
 
-#define CV_PROFILE(code)	{\
-							double t = (double)cv::getTickCount();\
-							{ code }\
-							cout << "DONE " << ((double)cv::getTickCount() - t)/cv::getTickFrequency() << "s" << endl;\
-							}
+#define CV_PROFILE(msg,code)	{\
+	std::cout << msg << " ";\
+	double __time_in_ticks = (double)cv::getTickCount();\
+	{ code }\
+	std::cout << "DONE " << ((double)cv::getTickCount() - __time_in_ticks)/cv::getTickFrequency() << "s" << std::endl;\
+}
 
 void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor);

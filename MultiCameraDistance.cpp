@@ -59,6 +59,9 @@ imgs_names(imgs_names_),features_matched(false),use_rich_features(true),use_gpu(
 	
 	K = cam_matrix;
 	invert(K, Kinv); //get inverse of camera matrix
+
+	distortion_coeff.convertTo(distcoeff_32f,CV_32FC1);
+	K.convertTo(K_32f,CV_32FC1);
 }
 
 void MultiCameraDistance::OnlyMatchFeatures(int strategy) 
@@ -72,7 +75,7 @@ void MultiCameraDistance::OnlyMatchFeatures(int strategy)
 			feature_matcher = new RichFeatureMatcher(imgs,imgpts);
 		}
 	} else {
-		feature_matcher = new OFFeatureMatcher(imgs,imgpts);
+		feature_matcher = new OFFeatureMatcher(use_gpu,imgs,imgpts);
 	}	
 
 	if(strategy & STRATEGY_USE_OPTICAL_FLOW)
@@ -82,22 +85,22 @@ void MultiCameraDistance::OnlyMatchFeatures(int strategy)
 	int frame_num_i = 0;
 	//#pragma omp parallel for schedule(dynamic)
 	
-	if (use_rich_features) {
-		for (frame_num_i = 0; frame_num_i < loop1_top; frame_num_i++) {
-			for (int frame_num_j = frame_num_i + 1; frame_num_j < loop2_top; frame_num_j++)
-			{
-				std::vector<cv::KeyPoint> fp,fp1;
-				std::cout << "------------ Match " << imgs_names[frame_num_i] << ","<<imgs_names[frame_num_j]<<" ------------\n";
-				std::vector<cv::DMatch> matches_tmp;
-				feature_matcher->MatchFeatures(frame_num_i,frame_num_j,&matches_tmp);
-				
-				//#pragma omp critical
-				{
-					matches_matrix[std::make_pair(frame_num_i,frame_num_j)] = matches_tmp;
-				}
-			}
-		}
-	} else {
+	//if (use_rich_features) {
+	//	for (frame_num_i = 0; frame_num_i < loop1_top; frame_num_i++) {
+	//		for (int frame_num_j = frame_num_i + 1; frame_num_j < loop2_top; frame_num_j++)
+	//		{
+	//			std::vector<cv::KeyPoint> fp,fp1;
+	//			std::cout << "------------ Match " << imgs_names[frame_num_i] << ","<<imgs_names[frame_num_j]<<" ------------\n";
+	//			std::vector<cv::DMatch> matches_tmp;
+	//			feature_matcher->MatchFeatures(frame_num_i,frame_num_j,&matches_tmp);
+	//			
+	//			//#pragma omp critical
+	//			{
+	//				matches_matrix[std::make_pair(frame_num_i,frame_num_j)] = matches_tmp;
+	//			}
+	//		}
+	//	}
+	//} else {
 #pragma omp parallel for
 		for (frame_num_i = 0; frame_num_i < loop1_top; frame_num_i++) {
 			for (int frame_num_j = frame_num_i + 1; frame_num_j < loop2_top; frame_num_j++)
@@ -108,7 +111,7 @@ void MultiCameraDistance::OnlyMatchFeatures(int strategy)
 				matches_matrix[std::make_pair(frame_num_i,frame_num_j)] = matches_tmp;
 			}
 		}
-	}
+	//}
 
 	features_matched = true;
 }

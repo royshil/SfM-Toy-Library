@@ -99,6 +99,12 @@ int main(int argc, char** argv) {
 		R(2,0)=v[i](2,0); R(2,1)=v[i](2,1); R(2,2)=v[i](2,2);
 		visualizerShowCamera(R,cv::Vec3f(v[i](0,3),v[i](1,3),v[i](2,3)),255,0,0,scale_cameras_down);
 	}
+
+	ShowCloud(distance->getPointCloud(), 
+			   distance->getPointCloudRGB(),
+			   "baseline_only");
+	WaitForVisualizationThread();
+	return 1;
 	
 	ShowClouds(distance->getPointCloud(), 
 			   distance->getPointCloudRGB(),

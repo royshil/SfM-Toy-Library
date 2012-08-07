@@ -36,13 +36,12 @@ GPUSURFFeatureMatcher::GPUSURFFeatureMatcher(vector<cv::Mat>& imgs_,
 	imgpts.resize(imgs_.size());
 	descriptors.resize(imgs_.size());
 
-	CV_PROFILE(
+	CV_PROFILE("extract",
 	for(int img_i=0;img_i<imgs_.size();img_i++) {
 		GpuMat _m; _m.upload(imgs_[img_i]);
 		(*extractor)(_m,GpuMat(),imgpts[img_i],descriptors[img_i]);
 		cout << ".";
 	}
-	cout << endl;
 	)
 }	
 
@@ -85,7 +84,7 @@ void GPUSURFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* 
 		if(use_ratio_test) {
 			vector<vector<DMatch> > knn_matches;
 			GpuMat trainIdx,distance,allDist;
-			CV_PROFILE(
+			CV_PROFILE("match", 
 				matcher.knnMatchSingle(descriptors_1,descriptors_2,trainIdx,distance,allDist,2); 
 				matcher.knnMatchDownload(trainIdx,distance,knn_matches);
 			)
@@ -100,7 +99,7 @@ void GPUSURFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* 
 			}
 			cout << "kept " << (*matches).size() << " features after ratio test"<<endl;
 		} else {
-			CV_PROFILE(matcher.match( descriptors_1, descriptors_2, *matches );)
+			CV_PROFILE("match",matcher.match( descriptors_1, descriptors_2, *matches );)
 		}
 	}
 }

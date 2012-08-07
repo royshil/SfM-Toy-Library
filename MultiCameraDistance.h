@@ -36,7 +36,9 @@ protected:
 	cv::Mat_<double> Kinv;
 	
 	cv::Mat cam_matrix,distortion_coeff;
-	
+	cv::Mat distcoeff_32f; 
+	cv::Mat K_32f;
+
 	std::vector<CloudPoint> pointcloud;
 	std::vector<cv::Vec3b> pointCloudRGB;
 	std::vector<cv::KeyPoint> correspImg1Pt; //TODO: remove
