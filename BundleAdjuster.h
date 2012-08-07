@@ -14,7 +14,7 @@
 class BundleAdjuster {
 public:
 	void adjustBundle(std::vector<CloudPoint>& pointcloud, 
-					  const cv::Mat& cam_matrix,
+					  cv::Mat& cam_matrix,
 					  const std::vector<std::vector<cv::KeyPoint> >& imgpts,
 					  std::map<int ,cv::Matx34d>& Pmats);
 };

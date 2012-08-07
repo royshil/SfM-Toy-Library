@@ -45,7 +45,7 @@ bool CheckCoherentRotation(cv::Mat_<double>& R) {
 	//	eR.row(0) = -eR.row(0);
 	//}
 	
-	if(fabsf(determinant(R))-1.0 > 1e-09) {
+	if(fabsf(determinant(R))-1.0 > 1e-07) {
 		cerr << "det(R) != +-1.0, this is not a rotation matrix" << endl;
 		return false;
 	}
@@ -173,8 +173,9 @@ bool TestTriangulation(const vector<CloudPoint>& pcloud) {
 	for (int i=0; i<pcloud.size(); i++) {
 		count += pcloud[i].pt.z > 0 ? 1 : 0;
 	}
-	cout << count << "/" << pcloud.size() << " = " << ((double)count / (double)pcloud.size())*100.0 << "% are in front of camera" << endl;
-	return (count / pcloud.size()) > 0.8; //allow only 20% "outliers"
+	double percentage = ((double)count / (double)pcloud.size());
+	cout << count << "/" << pcloud.size() << " = " << percentage*100.0 << "% are in front of camera" << endl;
+	return percentage > 0.8; //allow only 20% "outliers"
 }
 
 bool FindCameraMatrices(const Mat& K, 
@@ -222,7 +223,7 @@ bool FindCameraMatrices(const Mat& K,
 			}
 			
 			//according to http://en.wikipedia.org/wiki/Essential_matrix#Properties_of_the_essential_matrix
-			if(fabsf(determinant(E)) > 1e-08) {
+			if(fabsf(determinant(E)) > 1e-07) {
 				cout << "det(E) != 0 : " << determinant(E) << "\n";
 				P1 = 0;
 				return false;

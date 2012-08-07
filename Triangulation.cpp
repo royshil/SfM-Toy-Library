@@ -132,7 +132,7 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 	vector<double> reproj_error;
 	unsigned int pts_size = pt_set1.size();
 	
-#if 0
+#if 1
 	//convert to Point2f
 	vector<Point2f> _pt_set1_pt,_pt_set2_pt;
 	KeyPointsToPoints(pt_set1,_pt_set1_pt);
@@ -158,7 +158,7 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 	vector<Point2f> reprojected_pt_set1;
 	projectPoints(pt_3d,rvec,tvec,K,distcoeff,reprojected_pt_set1);
 
-	for (int i=0; i<pts_size; i++) {
+	for (unsigned int i=0; i<pts_size; i++) {
 		CloudPoint cp; 
 		cp.pt = pt_3d[i];
 		pointcloud.push_back(cp);

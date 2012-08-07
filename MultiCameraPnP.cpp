@@ -32,6 +32,7 @@ void MultiCameraPnP::GetBaseLineTriangulation() {
 	while (!goodF && m_first_view < (imgpts.size()-1)) {
 		m_second_view = m_first_view + 1;
 		while (!goodF && m_second_view < imgpts.size()) {
+			std::cout << " -------- " << imgs_names[m_first_view] << " and " << imgs_names[m_second_view] << " -------- " <<std::endl;
 			//what if reconstrcution of first two views is bad? fallback to another pair
 			//See if the Fundamental Matrix between these two views is good
 			goodF = FindCameraMatrices(K, Kinv, distortion_coeff,
@@ -72,20 +73,21 @@ void MultiCameraPnP::GetBaseLineTriangulation() {
 
 		GetAlignedPointsFromMatch(imgpts[m_first_view],imgpts[m_second_view],matches,pt_set1,pt_set2);
 		
+		pcloud.clear();
 		reproj_error = TriangulatePoints(pt_set1, 
 										 pt_set2, 
 										 Kinv, 
 										 distortion_coeff,
-										 P, 
+										 Pmats[m_first_view], 
 										 Pmats[m_second_view], 
 										 pcloud, 
 										 correspImg1Pt);
 		
-		std::cout << "pt_set1.size() " << pt_set1.size() << 
-					" pt_set2.size() " << pt_set2.size() << 
-					" matches.size() " << matches.size() << 
-					" pcloud.size() " << pcloud.size() <<
-					std::endl;
+//		std::cout << "pt_set1.size() " << pt_set1.size() << 
+//					" pt_set2.size() " << pt_set2.size() << 
+//					" matches.size() " << matches.size() << 
+//					" pcloud.size() " << pcloud.size() <<
+//					std::endl;
 		
 		for (unsigned int i=0; i<pcloud.size(); i++) {
 			pcloud[i].imgpt_for_img = std::vector<int>(imgs.size(),-1);
@@ -173,6 +175,7 @@ bool MultiCameraPnP::FindPoseEstimation(
 
 		cv::imshow("__tmp", reprojected);
 		cv::waitKey(0);
+		cv::destroyWindow("__tmp");
 
 		if(inliers.size() < imgPoints.size()/2) {
 			cerr << "not enough inliers to consider a good pose" << endl;
@@ -328,6 +331,21 @@ void MultiCameraPnP::GetRGBForPointCloud(
 	}
 }
 
+void MultiCameraPnP::AdjustCurrentBundle() {
+	cout << "======================== Bundle Adjustment ==========================\n";
+
+	pointcloud_beforeBA = pcloud;
+	GetRGBForPointCloud(pointcloud_beforeBA,pointCloudRGB_beforeBA);
+	
+	BundleAdjuster BA;
+	BA.adjustBundle(pcloud,cam_matrix,imgpts,Pmats);
+//	K = cam_matrix;
+//	Kinv = K.inv();
+	
+	pointcloud = pcloud;
+	GetRGBForPointCloud(pointcloud,pointCloudRGB);
+}	
+
 void MultiCameraPnP::RecoverDepthFromImages() {
 	if(!features_matched) 
 		OnlyMatchFeatures();
@@ -341,6 +359,13 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 				  0,0,1,0);
 
 	GetBaseLineTriangulation();
+	pointcloud = pcloud;
+	GetRGBForPointCloud(pcloud,pointCloudRGB);
+	return;
+	
+	AdjustCurrentBundle();
+	
+	cout << "using new camera matrix " << cam_matrix << endl;
 	
 	cv::Matx34d P1 = Pmats[m_second_view];
 	
@@ -388,18 +413,9 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 
 			break;
 		}
+
+		AdjustCurrentBundle();
 	}
-
-	cout << "======================== Bundle Adjustment ==========================\n";
-
-	pointcloud_beforeBA = pcloud;
-	GetRGBForPointCloud(pointcloud_beforeBA,pointCloudRGB_beforeBA);
-	
-	BundleAdjuster BA;
-	BA.adjustBundle(pcloud,cam_matrix,imgpts,Pmats);
-
-	pointcloud = pcloud;
-	GetRGBForPointCloud(pointcloud,pointCloudRGB);
 	
 	cout << "======================================================================\n";
 	cout << "========================= Depth Recovery DONE ========================\n";

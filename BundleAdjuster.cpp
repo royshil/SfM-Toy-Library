@@ -60,7 +60,7 @@ namespace
 
 
 void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud, 
-								  const Mat& cam_matrix,
+								  Mat& cam_matrix,
 								  const std::vector<std::vector<cv::KeyPoint> >& imgpts,
 								  std::map<int ,cv::Matx34d>& Pmats
 								) 
@@ -227,5 +227,23 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 			pointcloud[j].pt.y = Xs[j][1];
 			pointcloud[j].pt.z = Xs[j][2];
 		}
+		
+		for (int i = 0; i < N; ++i)
+		{
+			Matrix3x3d R = cams[i].getRotation();
+			Vector3d T = cams[i].getTranslation();
+			
+			Matx34d& P = Pmats[i];
+			P(0,0) = R[0][0]; P(0,1) = R[0][1]; P(0,2) = R[0][2]; P(0,3) = T[0];
+			P(1,0) = R[1][0]; P(1,1) = R[1][1]; P(1,2) = R[1][2]; P(1,3) = T[1];
+			P(2,0) = R[2][0]; P(2,1) = R[2][1]; P(2,2) = R[2][2]; P(2,3) = T[2];
+			
+		}
+		
+//		cam_matrix.at<double>(0,0) = Knew[0][0];
+//		cam_matrix.at<double>(0,1) = Knew[0][1];
+//		cam_matrix.at<double>(0,2) = Knew[0][2];
+//		cam_matrix.at<double>(1,1) = Knew[1][1];
+//		cam_matrix.at<double>(1,2) = Knew[1][2];
 	}
 }

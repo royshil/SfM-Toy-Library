@@ -33,6 +33,7 @@ public:
 	const std::vector<cv::Vec3b>& getPointCloudRGBBeforeBA() { return pointCloudRGB_beforeBA; }
 
 private:
+	void AdjustCurrentBundle();
 	void GetBaseLineTriangulation();
 	void Find2D3DCorrespondences(int working_view, 
 		std::vector<cv::Point3f>& ppcloud, 
