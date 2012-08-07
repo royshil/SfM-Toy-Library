@@ -132,7 +132,7 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 	vector<double> reproj_error;
 	unsigned int pts_size = pt_set1.size();
 	
-#if 1
+#if 0
 	//convert to Point2f
 	vector<Point2f> _pt_set1_pt,_pt_set2_pt;
 	KeyPointsToPoints(pt_set1,_pt_set1_pt);
@@ -204,8 +204,9 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 	}
 #endif
 	
+	Scalar mse = mean(reproj_error);
 	t = ((double)getTickCount() - t)/getTickFrequency();
-	cout << "Done. ("<<pointcloud.size()<<"points, " << t <<"s)"<< endl;
+	cout << "Done. ("<<pointcloud.size()<<"points, " << t <<"s, mean reproj err = " << mse[0] << ")"<< endl;
 	
 	//show "range image"
 #ifdef __SFM__DEBUG__
@@ -223,6 +224,6 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 		destroyWindow("Depth Map");
 	}	
 #endif
-	Scalar mse = mean(reproj_error);
+	
 	return mse[0];
 }

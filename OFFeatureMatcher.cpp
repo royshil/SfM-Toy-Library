@@ -74,46 +74,32 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 		Mat(vstatus_mat.t()).copyTo(Mat(vstatus));
 		Mat(verror_mat.t()).copyTo(Mat(verror));
 	} else {
-		calcOpticalFlowPyrLK(prevgray, gray, i_pts, j_pts, vstatus, verror);
+		CV_PROFILE("OpticalFlow",calcOpticalFlowPyrLK(prevgray, gray, i_pts, j_pts, vstatus, verror);)
 	}
 
 	double thresh = 1.0;
 	vector<Point2f> to_find;
 	vector<int> to_find_back_idx;
 	for (unsigned int i=0; i<vstatus.size(); i++) {
-		if (vstatus[i] && verror[i] < 9.0) {
-			if (i%3==0) { //prune some matches for display purposes
-				vstatus[i] = 1;
-			} else {
-				vstatus[i] = 0;
-			}
+		if (vstatus[i] && verror[i] < 12.0) {
 			to_find_back_idx.push_back(i);
 			to_find.push_back(j_pts[i]);
-			//TODO must support mutual-matching, cross-matching or ratio test
-			//bool found = false;
-			//for(int j=0;j<imgpts[idx_j].size() && !found;j++) {
-			//	if (found_in_imgpts_j.find(j) == found_in_imgpts_j.end()) {
-			//		double _d = norm(j_pts[i]-imgpts[idx_j][j].pt);
-			//		if(_d < thresh) {
-			//			matches->push_back(DMatch(i,j,_d));
-			//			found_in_imgpts_j.insert(j);
-			//			found = true;
-			//		}
-			//	}
-			//}
 		} else {
 			vstatus[i] = 0;
 		}
 	}
 
-	FlannBasedMatcher matcher;
 	std::set<int> found_in_imgpts_j;
 	Mat to_find_flat = Mat(to_find).reshape(1,to_find.size());
+	
 	vector<Point2f> j_pts_to_find;
-	CV_PROFILE("KeyPointsToPoints",KeyPointsToPoints(imgpts[idx_j],j_pts_to_find);)
+	KeyPointsToPoints(imgpts[idx_j],j_pts_to_find);
 	Mat j_pts_flat = Mat(j_pts_to_find).reshape(1,j_pts_to_find.size());
+
 	vector<vector<DMatch> > knn_matches;
+	FlannBasedMatcher matcher;
 	CV_PROFILE("RadiusMatch",matcher.radiusMatch(to_find_flat,j_pts_flat,knn_matches,2.0f);)
+	CV_PROFILE("Prune",
 	for(int i=0;i<knn_matches.size();i++) {
 		DMatch _m;
 		if(knn_matches[i].size()==1) {
@@ -133,13 +119,26 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 			found_in_imgpts_j.insert(_m.trainIdx);
 		}
 	}
+	)
+	cout << "pruned " << matches->size() << " / " << knn_matches.size() << " matches" << endl;
 #if 0
 #ifdef __SFM__DEBUG__
 	{
 		// draw flow field
 		Mat img_matches; cvtColor(imgs[idx_i],img_matches,CV_GRAY2BGR);
+		i_pts.clear(); j_pts.clear();
+		for(int i=0;i<matches->size();i++) {
+			Point i_pt = imgpts[idx_i][(*matches)[i].queryIdx].pt;
+			Point j_pt = imgpts[idx_j][(*matches)[i].trainIdx].pt;
+			i_pts.push_back(i_pt);
+			j_pts.push_back(j_pt);
+			vstatus[i] = 1;
+		}
 		drawArrows(img_matches, i_pts, j_pts, vstatus, verror, Scalar(0,255));
-		stringstream ss; ss << "flow field " << omp_get_thread_num();
+		stringstream ss; 
+		ss << matches->size() << " matches";
+		putText(img_matches,ss.str(),Point(10,20),CV_FONT_HERSHEY_PLAIN,1.0,Scalar(255),2);
+		ss.clear(); ss << "flow field " << omp_get_thread_num();
 		imshow( ss.str(), img_matches );
 		waitKey(500);
 		destroyWindow(ss.str());

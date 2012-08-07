@@ -131,7 +131,7 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 					vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );		
 		//-- Show detected matches
 		imshow( "Good Matches", img_matches );
-		waitKey(500);
+		waitKey(0);
 		destroyWindow("Good Matches");
 	}
 #endif		
@@ -175,7 +175,7 @@ bool TestTriangulation(const vector<CloudPoint>& pcloud) {
 	}
 	double percentage = ((double)count / (double)pcloud.size());
 	cout << count << "/" << pcloud.size() << " = " << percentage*100.0 << "% are in front of camera" << endl;
-	return percentage > 0.8; //allow only 20% "outliers"
+	return percentage > 0.75; //allow only 25% "outliers"
 }
 
 bool FindCameraMatrices(const Mat& K, 
@@ -259,12 +259,10 @@ bool FindCameraMatrices(const Mat& K,
 			cout << "Testing P1 " << endl << Mat(P1) << endl;
 			
 			vector<CloudPoint> pcloud; vector<KeyPoint> corresp;
-			TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
-//			Scalar X = mean(CloudPointsToPoints(pcloud));
-//			cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
+			double reproj_error = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
 			
 			//check if pointa are triangulated --in front-- of cameras for all 4 ambiguations
-			if (!TestTriangulation(pcloud)) {
+			if (!TestTriangulation(pcloud) || reproj_error > 100.0) {
 				t = -svd_u.col(2); //-u3
 				P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
 							 R(1,0),	R(1,1),	R(1,2),	t(1),
@@ -272,11 +270,9 @@ bool FindCameraMatrices(const Mat& K,
 				cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 				pcloud.clear(); corresp.clear();
-				TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
-//				X = mean(CloudPointsToPoints(pcloud));
-//				cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
+				reproj_error = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
 				
-				if (!TestTriangulation(pcloud)) {
+				if (!TestTriangulation(pcloud) || reproj_error > 100.0) {
 					t = svd_u.col(2); //u3
 					R = svd_u * Mat(Wt) * svd_vt; //UWtVt
 					P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
@@ -285,11 +281,9 @@ bool FindCameraMatrices(const Mat& K,
 					cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 					pcloud.clear(); corresp.clear();
-					TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
-//					X = mean(CloudPointsToPoints(pcloud));
-//					cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
+					reproj_error = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
 					
-					if (!TestTriangulation(pcloud)) {
+					if (!TestTriangulation(pcloud) || reproj_error > 100.0) {
 						t = -svd_u.col(2);//-u3
 						P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
 									 R(1,0),	R(1,1),	R(1,2),	t(1),
@@ -297,11 +291,9 @@ bool FindCameraMatrices(const Mat& K,
 						cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 						pcloud.clear(); corresp.clear();
-						TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
-//						X = mean(CloudPointsToPoints(pcloud));
-//						cout <<	"Mean :" << X[0] << "," << X[1] << "," << X[2] << "," << X[3]  << endl;
+						reproj_error = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
 						
-						if (!TestTriangulation(pcloud)) {
+						if (!TestTriangulation(pcloud) || reproj_error > 100.0) {
 							cout << "Shit." << endl; 
 							return false;
 						}

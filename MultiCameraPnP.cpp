@@ -359,9 +359,9 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 				  0,0,1,0);
 
 	GetBaseLineTriangulation();
-	pointcloud = pcloud;
-	GetRGBForPointCloud(pcloud,pointCloudRGB);
-	return;
+	//pointcloud = pcloud;
+	//GetRGBForPointCloud(pcloud,pointCloudRGB);
+	//return;
 	
 	AdjustCurrentBundle();
 	
@@ -414,9 +414,11 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 			break;
 		}
 
-		AdjustCurrentBundle();
+		
 	}
 	
+	AdjustCurrentBundle();
+
 	cout << "======================================================================\n";
 	cout << "========================= Depth Recovery DONE ========================\n";
 	cout << "======================================================================\n";

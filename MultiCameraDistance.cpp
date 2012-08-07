@@ -101,7 +101,7 @@ void MultiCameraDistance::OnlyMatchFeatures(int strategy)
 	//		}
 	//	}
 	//} else {
-#pragma omp parallel for
+#pragma omp parallel for num_threads(4)
 		for (frame_num_i = 0; frame_num_i < loop1_top; frame_num_i++) {
 			for (int frame_num_j = frame_num_i + 1; frame_num_j < loop2_top; frame_num_j++)
 			{
