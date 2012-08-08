@@ -22,6 +22,62 @@ using namespace std;
 
 #include <Eigen/Eigen>
 
+void DecomposeEssentialUsingHorn90(double _E[9]) {
+	//from : http://people.csail.mit.edu/bkph/articles/Essential.pdf
+	using namespace Eigen;
+
+	Matrix3d E = Map<Matrix<double,3,3,RowMajor> >(_E);
+	Matrix3d EEt = E * E.transpose();
+	Vector3d e0e1 = E.col(0).cross(E.col(1)),e1e2 = E.col(1).cross(E.col(2)),e2e0 = E.col(2).cross(E.col(2));
+	Vector3d b1,b2;
+
+#if 1
+	//Method 1
+	Matrix3d bbt = 0.5 * EEt.trace() * Matrix3d::Identity() - EEt; //Horn90 (12)
+	Vector3d bbt_diag = bbt.diagonal();
+	if (bbt_diag(0) > bbt_diag(1) && bbt_diag(0) > bbt_diag(2)) {
+		b1 = bbt.row(0) / sqrt(bbt_diag(0));
+		b2 = -b1;
+	} else if (bbt_diag(1) > bbt_diag(0) && bbt_diag(1) > bbt_diag(2)) {
+		b1 = bbt.row(1) / sqrt(bbt_diag(1));
+		b2 = -b1;
+	} else {
+		b1 = bbt.row(2) / sqrt(bbt_diag(2));
+		b2 = -b1;
+	}
+#else
+	//Method 2
+	if (e0e1.norm() > e1e2.norm() && e0e1.norm() > e2e0.norm()) {
+		b1 = e0e1.normalized() * sqrt(0.5 * EEt.trace()); //Horn90 (18)
+		b2 = -b1;
+	} else if (e1e2.norm() > e0e1.norm() && e1e2.norm() > e2e0.norm()) {
+		b1 = e1e2.normalized() * sqrt(0.5 * EEt.trace()); //Horn90 (18)
+		b2 = -b1;
+	} else {
+		b1 = e2e0.normalized() * sqrt(0.5 * EEt.trace()); //Horn90 (18)
+		b2 = -b1;
+	}
+#endif
+	
+	//Horn90 (19)
+	Matrix3d cofactors; cofactors.col(0) = e1e2; cofactors.col(1) = e2e0; cofactors.col(2) = e0e1;
+	cofactors.transposeInPlace();
+	
+	//Horn90 (13)
+	Matrix3d B1; B1 <<	b1(0)*b1(0) , b1(0)*b1(1) , b1(0)*b1(2) , 
+						b1(1)*b1(0) , b1(1)*b1(1) , b1(1)*b1(2) , 
+						b1(2)*b1(0) , b1(2)*b1(1) , b1(2)*b1(2);
+	Matrix3d B2; B2 <<	b2(0)*b2(0) , b2(0)*b2(1) , b2(0)*b2(2) , 
+						b2(1)*b2(0) , b2(1)*b2(1) , b2(1)*b2(2) , 
+						b2(2)*b2(0) , b2(2)*b2(1) , b2(2)*b2(2);
+	
+	//Horn90 (24)
+	Matrix3d R1 = (cofactors.transpose() - B1*E) / b1.dot(b1);
+	Matrix3d R2 = (cofactors.transpose() - B2*E) / b2.dot(b2);
+	
+	cout << "Horn90 provided " << endl << R1 << endl << "and" << endl << R2 << endl;
+}
+
 bool CheckCoherentRotation(cv::Mat_<double>& R) {
 	std::cout << "R; " << R << std::endl;
 	//double s = cv::norm(cv::abs(R),cv::Mat_<double>::eye(3,3),cv::NORM_L1);
@@ -30,16 +86,16 @@ bool CheckCoherentRotation(cv::Mat_<double>& R) {
 	//	std::cout << "rotation is probably not coherent.." << std::endl;
 	//	return false;	//skip triangulation
 	//}
-	//Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> > eR(R[0]);
-	//if(eR(2,0) < -0.9)
-	//{
-	//	cout << "rotate 180deg (PI rad) on Y" << endl;
+	Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> > eR(R[0]);
+	if(eR(2,0) < -0.9)
+	{
+		cout << "rotate 180deg (PI rad) on Y" << endl;
 
-	//	cout << "before" << endl << eR << endl;
-	//	Eigen::AngleAxisd aad(-M_PI/2.0,Eigen::Vector3d::UnitY());
-	//	eR *= aad.toRotationMatrix();
-	//	cout << "after" << endl << eR << endl;
-	//}
+		cout << "before" << endl << eR << endl;
+		Eigen::AngleAxisd aad(-M_PI/2.0,Eigen::Vector3d::UnitY());
+		eR *= aad.toRotationMatrix();
+		cout << "after" << endl << eR << endl;
+	}
 	//if(eR(0,0) < -0.9) {
 	//	cout << "flip right vector" << endl;
 	//	eR.row(0) = -eR.row(0);
@@ -208,6 +264,7 @@ bool FindCameraMatrices(const Mat& K,
 		
 		//Essential matrix: compute then extract cameras [R|t]
 		Mat_<double> E = K.t() * F * K; //according to HZ (9.12)
+		DecomposeEssentialUsingHorn90(E[0]);
 		//decompose E to P' , HZ (9.19)
 		{			
 			Mat svd_u, svd_vt, svd_w;
@@ -237,13 +294,7 @@ bool FindCameraMatrices(const Mat& K,
 					   0,0,1);
 			Mat_<double> R = svd_u * Mat(W) * svd_vt; //HZ 9.19
 			Mat_<double> t = svd_u.col(2); //u3
-			
-			if (!CheckCoherentRotation(R)) {
-				cout << "resulting rotation is not coherent\n";
-				P1 = 0;
-				return false;
-			}
-			
+						
 			if(determinant(R)+1.0 < 1e-09) {
 				//according to http://en.wikipedia.org/wiki/Essential_matrix#Showing_that_it_is_valid
 				cout << "det(R) == -1 ["<<determinant(R)<<"]: flip E's sign" << endl;
@@ -252,6 +303,11 @@ bool FindCameraMatrices(const Mat& K,
 				R = svd_u * Mat(W) * svd_vt;
 				t = svd_u.col(2);
 			}
+			if (!CheckCoherentRotation(R)) {
+				cout << "resulting rotation is not coherent\n";
+				P1 = 0;
+				return false;
+			}
 			
 			P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
 						 R(1,0),	R(1,1),	R(1,2),	t(1),
@@ -259,10 +315,11 @@ bool FindCameraMatrices(const Mat& K,
 			cout << "Testing P1 " << endl << Mat(P1) << endl;
 			
 			vector<CloudPoint> pcloud; vector<KeyPoint> corresp;
-			double reproj_error = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
+			double reproj_error1 = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
+			double reproj_error2 = TriangulatePoints(imgpts2_good, imgpts1_good, Kinv, distcoeff, P1, P, pcloud, corresp);
 			
 			//check if pointa are triangulated --in front-- of cameras for all 4 ambiguations
-			if (!TestTriangulation(pcloud) || reproj_error > 100.0) {
+			if (!TestTriangulation(pcloud) || reproj_error1 > 100.0 || reproj_error2 > 100.0) {
 				t = -svd_u.col(2); //-u3
 				P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
 							 R(1,0),	R(1,1),	R(1,2),	t(1),
@@ -270,20 +327,28 @@ bool FindCameraMatrices(const Mat& K,
 				cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 				pcloud.clear(); corresp.clear();
-				reproj_error = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
+				reproj_error1 = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
+				reproj_error2 = TriangulatePoints(imgpts2_good, imgpts1_good, Kinv, distcoeff, P1, P, pcloud, corresp);
 				
-				if (!TestTriangulation(pcloud) || reproj_error > 100.0) {
+				if (!TestTriangulation(pcloud) || reproj_error1 > 100.0 || reproj_error2 > 100.0) {
 					t = svd_u.col(2); //u3
 					R = svd_u * Mat(Wt) * svd_vt; //UWtVt
+					if (!CheckCoherentRotation(R)) {
+						cout << "resulting rotation is not coherent\n";
+						P1 = 0;
+						return false;
+					}
+					
 					P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
 								 R(1,0),	R(1,1),	R(1,2),	t(1),
 								 R(2,0),	R(2,1),	R(2,2), t(2));
 					cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 					pcloud.clear(); corresp.clear();
-					reproj_error = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
+					reproj_error1 = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
+					reproj_error2 = TriangulatePoints(imgpts2_good, imgpts1_good, Kinv, distcoeff, P1, P, pcloud, corresp);
 					
-					if (!TestTriangulation(pcloud) || reproj_error > 100.0) {
+					if (!TestTriangulation(pcloud) || reproj_error1 > 100.0 || reproj_error2 > 100.0) {
 						t = -svd_u.col(2);//-u3
 						P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
 									 R(1,0),	R(1,1),	R(1,2),	t(1),
@@ -291,9 +356,10 @@ bool FindCameraMatrices(const Mat& K,
 						cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 						pcloud.clear(); corresp.clear();
-						reproj_error = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
+						reproj_error1 = TriangulatePoints(imgpts1_good, imgpts2_good, Kinv, distcoeff, P, P1, pcloud, corresp);
+						reproj_error2 = TriangulatePoints(imgpts2_good, imgpts1_good, Kinv, distcoeff, P1, P, pcloud, corresp);
 						
-						if (!TestTriangulation(pcloud) || reproj_error > 100.0) {
+						if (!TestTriangulation(pcloud) || reproj_error1 > 100.0 || reproj_error2 > 100.0) {
 							cout << "Shit." << endl; 
 							return false;
 						}

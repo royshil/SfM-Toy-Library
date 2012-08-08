@@ -22,9 +22,12 @@ void MultiCameraPnP::GetBaseLineTriangulation() {
 	std::cout << "=========================== Baseline triangulation ===========================\n";
 
 	cv::Matx34d P(1,0,0,0,
-				0,1,0,0,
-				0,0,1,0);
-
+				  0,1,0,0,
+				  0,0,1,0),
+				P1(1,0,0,0,
+				   0,1,0,0,
+				   0,0,1,0);
+	
 	std::vector<CloudPoint> tmp_pcloud;
 	
 	//Reconstruct from two views
@@ -42,7 +45,7 @@ void MultiCameraPnP::GetBaseLineTriangulation() {
 									   imgpts_good[m_first_view],
 									   imgpts_good[m_second_view], 
 									   P, 
-									   Pmats[m_second_view],
+									   P1,
 									   matches_matrix[std::make_pair(m_first_view,m_second_view)],
 									   tmp_pcloud
 #ifdef __SFM__DEBUG__
@@ -51,13 +54,34 @@ void MultiCameraPnP::GetBaseLineTriangulation() {
 									   );
 			if (!goodF) {
 				m_second_view++; //go to the next view...
+			} else {
+				vector<CloudPoint> new_triangulated;
+				vector<int> add_to_cloud;
+
+				Pmats[m_first_view] = P;
+				Pmats[m_second_view] = P1;
+
+				bool good_triangulation = TriangulatePointsBetweenViews(m_second_view,m_first_view,new_triangulated,add_to_cloud);
+				if(!good_triangulation) {
+					std::cout << "triangulation failed" << std::endl;
+					goodF = false;
+					Pmats[m_first_view] = 0;
+					Pmats[m_second_view] = 0;
+					m_second_view++;
+				} else {
+					std::cout << "before triangulation: " << pcloud.size();
+					for (unsigned int j=0; j<add_to_cloud.size(); j++) {
+						if(add_to_cloud[j] == 1)
+							pcloud.push_back(new_triangulated[j]);
+					}
+					std::cout << " after " << pcloud.size() << std::endl;
+				}				
 			}
 		}
 		if (!goodF) {
 			m_first_view++;
 		}
 	}
-	Pmats[m_first_view] = P;
 		
 	if (!goodF) {
 		cerr << "Cannot find a good pair of images to obtain a baseline triangulation" << endl;
@@ -66,32 +90,32 @@ void MultiCameraPnP::GetBaseLineTriangulation() {
 	
 	cout << "Taking baseline from " << imgs_names[m_first_view] << " and " << imgs_names[m_second_view] << endl;
 	
-	double reproj_error;
-	{
-		std::vector<cv::KeyPoint> pt_set1,pt_set2;
-		
-		std::vector<cv::DMatch> matches = matches_matrix[std::make_pair(m_first_view,m_second_view)];
-
-		GetAlignedPointsFromMatch(imgpts[m_first_view],imgpts[m_second_view],matches,pt_set1,pt_set2);
-		
-		pcloud.clear();
-		reproj_error = TriangulatePoints(pt_set1, 
-										 pt_set2, 
-										 Kinv, 
-										 distortion_coeff,
-										 Pmats[m_first_view], 
-										 Pmats[m_second_view], 
-										 pcloud, 
-										 correspImg1Pt);
-		
-		for (unsigned int i=0; i<pcloud.size(); i++) {
-			pcloud[i].imgpt_for_img = std::vector<int>(imgs.size(),-1);
-			//matches[i] corresponds to pointcloud[i]
-			pcloud[i].imgpt_for_img[m_first_view] = matches[i].queryIdx;
-			pcloud[i].imgpt_for_img[m_second_view] = matches[i].trainIdx;
-		}
-	}
-	std::cout << "triangulation reproj error " << reproj_error << std::endl;
+//	double reproj_error;
+//	{
+//		std::vector<cv::KeyPoint> pt_set1,pt_set2;
+//		
+//		std::vector<cv::DMatch> matches = matches_matrix[std::make_pair(m_first_view,m_second_view)];
+//
+//		GetAlignedPointsFromMatch(imgpts[m_first_view],imgpts[m_second_view],matches,pt_set1,pt_set2);
+//		
+//		pcloud.clear();
+//		reproj_error = TriangulatePoints(pt_set1, 
+//										 pt_set2, 
+//										 Kinv, 
+//										 distortion_coeff,
+//										 Pmats[m_first_view], 
+//										 Pmats[m_second_view], 
+//										 pcloud, 
+//										 correspImg1Pt);
+//		
+//		for (unsigned int i=0; i<pcloud.size(); i++) {
+//			pcloud[i].imgpt_for_img = std::vector<int>(imgs.size(),-1);
+//			//matches[i] corresponds to pointcloud[i]
+//			pcloud[i].imgpt_for_img[m_first_view] = matches[i].queryIdx;
+//			pcloud[i].imgpt_for_img[m_second_view] = matches[i].trainIdx;
+//		}
+//	}
+//	std::cout << "triangulation reproj error " << reproj_error << std::endl;
 }
 
 void MultiCameraPnP::Find2D3DCorrespondences(int working_view, 
@@ -314,6 +338,7 @@ bool MultiCameraPnP::TriangulatePointsBetweenViews(
 		}
 	}
 	std::cout << found_other_views_count << "/" << matches.size() << " points were found in other views, adding " << cv::countNonZero(add_to_cloud) << " new\n";
+	return true;
 }
 
 void MultiCameraPnP::GetRGBForPointCloud(
@@ -371,7 +396,7 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 	AdjustCurrentBundle();
 	//pointcloud = pcloud;
 	//GetRGBForPointCloud(pcloud,pointCloudRGB);
-	//return;
+	return;
 	
 	cv::Matx34d P1 = Pmats[m_second_view];
 	cv::Mat_<double> t = (cv::Mat_<double>(1,3) << P1(0,3), P1(1,3), P1(2,3));

@@ -148,7 +148,7 @@ void keyboardEventOccurred (const pcl::visualization::KeyboardEvent& event_,
                             void* viewer_void)
 {
 	pcl::visualization::CloudViewer* viewer = static_cast<pcl::visualization::CloudViewer *> (viewer_void);
-	cout << "event_.getKeySym () = " << event_.getKeySym () << " event_.keyDown () " << event_.keyDown () << endl;
+//	cout << "event_.getKeySym () = " << event_.getKeySym () << " event_.keyDown () " << event_.keyDown () << endl;
 	if ((event_.getKeySym () == "s" || event_.getKeySym () == "S") && event_.keyDown ())
 	{
 		cout << "s clicked" << endl;
