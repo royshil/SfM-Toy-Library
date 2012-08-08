@@ -22,7 +22,7 @@ using namespace std;
 
 #include <Eigen/Eigen>
 
-void DecomposeEssentialUsingHorn90(double _E[9]) {
+void DecomposeEssentialUsingHorn90(double _E[9], double _R1[9], double _R2[9], double _t1[3], double _t2[3]) {
 	//from : http://people.csail.mit.edu/bkph/articles/Essential.pdf
 	using namespace Eigen;
 
@@ -63,17 +63,21 @@ void DecomposeEssentialUsingHorn90(double _E[9]) {
 	Matrix3d cofactors; cofactors.col(0) = e1e2; cofactors.col(1) = e2e0; cofactors.col(2) = e0e1;
 	cofactors.transposeInPlace();
 	
-	//Horn90 (13)
-	Matrix3d B1; B1 <<	b1(0)*b1(0) , b1(0)*b1(1) , b1(0)*b1(2) , 
-						b1(1)*b1(0) , b1(1)*b1(1) , b1(1)*b1(2) , 
-						b1(2)*b1(0) , b1(2)*b1(1) , b1(2)*b1(2);
-	Matrix3d B2; B2 <<	b2(0)*b2(0) , b2(0)*b2(1) , b2(0)*b2(2) , 
-						b2(1)*b2(0) , b2(1)*b2(1) , b2(1)*b2(2) , 
-						b2(2)*b2(0) , b2(2)*b2(1) , b2(2)*b2(2);
-	
+	//B = [b]_x , see Horn90 (6)
+	Matrix3d B1; B1 <<	0,-b1(2),b1(1),
+						b1(2),0,-b1(0),
+						-b1(1),b1(0),0;
+	Matrix3d B2; B2 <<	0,-b2(2),b2(1),
+						b2(2),0,-b2(0),
+						-b2(1),b2(0),0;
+
+	Map<Matrix<double,3,3,RowMajor> > R1(_R1),R2(_R2);
+
 	//Horn90 (24)
-	Matrix3d R1 = (cofactors.transpose() - B1*E) / b1.dot(b1);
-	Matrix3d R2 = (cofactors.transpose() - B2*E) / b2.dot(b2);
+	R2 = (cofactors.transpose() - B1*E) / b1.dot(b1);
+	R1 = (cofactors.transpose() - B2*E) / b2.dot(b2);
+	Map<Vector3d> t1(_t1),t2(_t2); 
+	t1 = b2; t2 = b1;
 	
 	cout << "Horn90 provided " << endl << R1 << endl << "and" << endl << R2 << endl;
 }
@@ -264,9 +268,17 @@ bool FindCameraMatrices(const Mat& K,
 		
 		//Essential matrix: compute then extract cameras [R|t]
 		Mat_<double> E = K.t() * F * K; //according to HZ (9.12)
-		DecomposeEssentialUsingHorn90(E[0]);
+
+		//according to http://en.wikipedia.org/wiki/Essential_matrix#Properties_of_the_essential_matrix
+		if(fabsf(determinant(E)) > 1e-07) {
+			cout << "det(E) != 0 : " << determinant(E) << "\n";
+			P1 = 0;
+			return false;
+		}
+		
 		//decompose E to P' , HZ (9.19)
 		{			
+#ifdef DECOMPOSE_SVD
 			Mat svd_u, svd_vt, svd_w;
 			TakeSVDOfE(E,svd_u,svd_vt,svd_w);
 
@@ -278,40 +290,41 @@ bool FindCameraMatrices(const Mat& K,
 				P1 = 0; 
 				return false;
 			}
-			
-			//according to http://en.wikipedia.org/wiki/Essential_matrix#Properties_of_the_essential_matrix
-			if(fabsf(determinant(E)) > 1e-07) {
-				cout << "det(E) != 0 : " << determinant(E) << "\n";
-				P1 = 0;
-				return false;
-			}
-									
+												
 			Matx33d W(0,-1,0,	//HZ 9.13
 					  1,0,0,
 					  0,0,1);
 			Matx33d Wt(0,1,0,
 					   -1,0,0,
 					   0,0,1);
-			Mat_<double> R = svd_u * Mat(W) * svd_vt; //HZ 9.19
-			Mat_<double> t = svd_u.col(2); //u3
-						
-			if(determinant(R)+1.0 < 1e-09) {
-				//according to http://en.wikipedia.org/wiki/Essential_matrix#Showing_that_it_is_valid
-				cout << "det(R) == -1 ["<<determinant(R)<<"]: flip E's sign" << endl;
-				E = -E;
-				TakeSVDOfE(E, svd_u, svd_vt, svd_w);
-				R = svd_u * Mat(W) * svd_vt;
-				t = svd_u.col(2);
-			}
-			if (!CheckCoherentRotation(R)) {
+			Mat_<double> R1 = svd_u * Mat(W) * svd_vt; //HZ 9.19
+			Mat_<double> R2 = svd_u * Mat(Wt) * svd_vt; //HZ 9.19
+			Mat_<double> t1 = svd_u.col(2); //u3
+			Mat_<double> t2 = svd_u.col(2); //u3
+#else
+			Mat_<double> R1(3,3);
+			Mat_<double> R2(3,3);
+			Mat_<double> t1(1,3);
+			Mat_<double> t2(1,3);
+			DecomposeEssentialUsingHorn90(E[0],R1[0],R2[0],t1[0],t2[0]);
+#endif
+//			if(determinant(R)+1.0 < 1e-09) {
+//				//according to http://en.wikipedia.org/wiki/Essential_matrix#Showing_that_it_is_valid
+//				cout << "det(R) == -1 ["<<determinant(R)<<"]: flip E's sign" << endl;
+//				E = -E;
+//				TakeSVDOfE(E, svd_u, svd_vt, svd_w);
+//				R = svd_u * Mat(W) * svd_vt;
+//				t = svd_u.col(2);
+//			}
+			if (!CheckCoherentRotation(R1)) {
 				cout << "resulting rotation is not coherent\n";
 				P1 = 0;
 				return false;
 			}
 			
-			P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
-						 R(1,0),	R(1,1),	R(1,2),	t(1),
-						 R(2,0),	R(2,1),	R(2,2), t(2));
+			P1 = Matx34d(R1(0,0),	R1(0,1),	R1(0,2),	t1(0),
+						 R1(1,0),	R1(1,1),	R1(1,2),	t1(1),
+						 R1(2,0),	R1(2,1),	R1(2,2),	t1(2));
 			cout << "Testing P1 " << endl << Mat(P1) << endl;
 			
 			vector<CloudPoint> pcloud; vector<KeyPoint> corresp;
@@ -320,10 +333,9 @@ bool FindCameraMatrices(const Mat& K,
 			
 			//check if pointa are triangulated --in front-- of cameras for all 4 ambiguations
 			if (!TestTriangulation(pcloud) || reproj_error1 > 100.0 || reproj_error2 > 100.0) {
-				t = -svd_u.col(2); //-u3
-				P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
-							 R(1,0),	R(1,1),	R(1,2),	t(1),
-							 R(2,0),	R(2,1),	R(2,2), t(2));
+				P1 = Matx34d(R1(0,0),	R1(0,1),	R1(0,2),	t2(0),
+							 R1(1,0),	R1(1,1),	R1(1,2),	t2(1),
+							 R1(2,0),	R1(2,1),	R1(2,2),	t2(2));
 				cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 				pcloud.clear(); corresp.clear();
@@ -331,17 +343,15 @@ bool FindCameraMatrices(const Mat& K,
 				reproj_error2 = TriangulatePoints(imgpts2_good, imgpts1_good, Kinv, distcoeff, P1, P, pcloud, corresp);
 				
 				if (!TestTriangulation(pcloud) || reproj_error1 > 100.0 || reproj_error2 > 100.0) {
-					t = svd_u.col(2); //u3
-					R = svd_u * Mat(Wt) * svd_vt; //UWtVt
-					if (!CheckCoherentRotation(R)) {
+					if (!CheckCoherentRotation(R2)) {
 						cout << "resulting rotation is not coherent\n";
 						P1 = 0;
 						return false;
 					}
 					
-					P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
-								 R(1,0),	R(1,1),	R(1,2),	t(1),
-								 R(2,0),	R(2,1),	R(2,2), t(2));
+					P1 = Matx34d(R2(0,0),	R2(0,1),	R2(0,2),	t1(0),
+								 R2(1,0),	R2(1,1),	R2(1,2),	t1(1),
+								 R2(2,0),	R2(2,1),	R2(2,2),	t1(2));
 					cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 					pcloud.clear(); corresp.clear();
@@ -349,10 +359,9 @@ bool FindCameraMatrices(const Mat& K,
 					reproj_error2 = TriangulatePoints(imgpts2_good, imgpts1_good, Kinv, distcoeff, P1, P, pcloud, corresp);
 					
 					if (!TestTriangulation(pcloud) || reproj_error1 > 100.0 || reproj_error2 > 100.0) {
-						t = -svd_u.col(2);//-u3
-						P1 = Matx34d(R(0,0),	R(0,1),	R(0,2),	t(0),
-									 R(1,0),	R(1,1),	R(1,2),	t(1),
-									 R(2,0),	R(2,1),	R(2,2), t(2));
+						P1 = Matx34d(R2(0,0),	R2(0,1),	R2(0,2),	t2(0),
+									 R2(1,0),	R2(1,1),	R2(1,2),	t2(1),
+									 R2(2,0),	R2(2,1),	R2(2,2),	t2(2));
 						cout << "Testing P1 "<< endl << Mat(P1) << endl;
 
 						pcloud.clear(); corresp.clear();
