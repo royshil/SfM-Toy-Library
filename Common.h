@@ -20,6 +20,7 @@ struct CloudPoint {
 	std::vector<int> imgpt_for_img;
 };
 
+std::vector<cv::DMatch> FlipMatches(const std::vector<cv::DMatch>& matches);
 void KeyPointsToPoints(const std::vector<cv::KeyPoint>& kps, std::vector<cv::Point2f>& ps);
 void PointsToKeyPoints(const std::vector<cv::Point2f>& ps, std::vector<cv::KeyPoint>& kps);
 

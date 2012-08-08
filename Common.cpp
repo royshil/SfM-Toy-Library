@@ -19,6 +19,15 @@
 using namespace std;
 using namespace cv;
 
+std::vector<cv::DMatch> FlipMatches(const std::vector<cv::DMatch>& matches) {
+	std::vector<cv::DMatch> flip;
+	for(int i=0;i<matches.size();i++) {
+		flip.push_back(matches[i]);
+		swap(flip.back().queryIdx,flip.back().trainIdx);
+	}
+	return flip;
+}
+
 std::vector<cv::Point3d> CloudPointsToPoints(const std::vector<CloudPoint> cpts) {
 	std::vector<cv::Point3d> out;
 	for (unsigned int i=0; i<cpts.size(); i++) {

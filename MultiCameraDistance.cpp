@@ -109,6 +109,9 @@ void MultiCameraDistance::OnlyMatchFeatures(int strategy)
 				std::vector<cv::DMatch> matches_tmp;
 				feature_matcher->MatchFeatures(frame_num_i,frame_num_j,&matches_tmp);
 				matches_matrix[std::make_pair(frame_num_i,frame_num_j)] = matches_tmp;
+
+				std::vector<cv::DMatch> matches_tmp_flip = FlipMatches(matches_tmp);
+				matches_matrix[std::make_pair(frame_num_j,frame_num_i)] = matches_tmp_flip;
 			}
 		}
 	//}

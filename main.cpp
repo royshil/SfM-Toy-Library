@@ -57,7 +57,6 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	RunVisualizationThread();
 	
 	cv::Ptr<MultiCameraPnP> distance = new MultiCameraPnP(images,images_names,string(argv[1]));
 	if(argc < 3)
@@ -72,6 +71,8 @@ int main(int argc, char** argv) {
 	
 
 	distance->RecoverDepthFromImages();
+
+		RunVisualizationThread();
 
 	//get the scale of the result cloud using PCA
 	double scale_cameras_down = 1.0;
@@ -100,16 +101,17 @@ int main(int argc, char** argv) {
 		visualizerShowCamera(R,cv::Vec3f(v[i](0,3),v[i](1,3),v[i](2,3)),255,0,0,scale_cameras_down);
 	}
 
-	ShowCloud(distance->getPointCloud(), 
-			   distance->getPointCloudRGB(),
-			   "baseline_only");
-	WaitForVisualizationThread();
-	return 1;
+	//ShowCloud(distance->getPointCloud(), 
+	//		   distance->getPointCloudRGB(),
+	//		   "baseline_only");
+	//WaitForVisualizationThread();
+	//return 1;
 	
 	ShowClouds(distance->getPointCloud(), 
 			   distance->getPointCloudRGB(),
 			   distance->getPointCloudBeforeBA(),
 			   distance->getPointCloudRGBBeforeBA()
 			   );
+	WaitForVisualizationThread();
 }
 #endif

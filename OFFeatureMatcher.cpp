@@ -97,7 +97,8 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 	Mat j_pts_flat = Mat(j_pts_to_find).reshape(1,j_pts_to_find.size());
 
 	vector<vector<DMatch> > knn_matches;
-	FlannBasedMatcher matcher;
+	//FlannBasedMatcher matcher;
+	BFMatcher matcher(CV_L2);
 	CV_PROFILE("RadiusMatch",matcher.radiusMatch(to_find_flat,j_pts_flat,knn_matches,2.0f);)
 	CV_PROFILE("Prune",
 	for(int i=0;i<knn_matches.size();i++) {

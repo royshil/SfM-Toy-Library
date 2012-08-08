@@ -6,6 +6,7 @@
  *  Copyright 2012 MIT. All rights reserved.
  *
  */
+#define USE_PROFILING
 
 #include "MultiCameraPnP.h"
 #include "BundleAdjuster.h"
@@ -83,12 +84,6 @@ void MultiCameraPnP::GetBaseLineTriangulation() {
 										 pcloud, 
 										 correspImg1Pt);
 		
-//		std::cout << "pt_set1.size() " << pt_set1.size() << 
-//					" pt_set2.size() " << pt_set2.size() << 
-//					" matches.size() " << matches.size() << 
-//					" pcloud.size() " << pcloud.size() <<
-//					std::endl;
-		
 		for (unsigned int i=0; i<pcloud.size(); i++) {
 			pcloud[i].imgpt_for_img = std::vector<int>(imgs.size(),-1);
 			//matches[i] corresponds to pointcloud[i]
@@ -106,10 +101,13 @@ void MultiCameraPnP::Find2D3DCorrespondences(int working_view,
 	ppcloud.clear(); imgPoints.clear();
 
 	vector<int> pcloud_status(pcloud.size(),0);
-	for (int old_view = working_view-1; old_view >= 0; old_view--)
+	for (int old_view = imgs.size()-1; old_view >= 0; old_view--)
 	{
+		if(old_view == working_view) continue;
+
 		//check for matches_from_old_to_working between i'th frame and <old_view>'th frame (and thus the current cloud)
 		std::vector<cv::DMatch> matches_from_old_to_working = matches_matrix[std::make_pair(old_view,working_view)];
+
 		for (unsigned int match_from_old_view=0; match_from_old_view < matches_from_old_to_working.size(); match_from_old_view++) {
 			// the index of the matching point in <old_view>
 			int idx_in_old_view = matches_from_old_to_working[match_from_old_view].queryIdx;
@@ -152,33 +150,46 @@ bool MultiCameraPnP::FindPoseEstimation(
 	}
 
 	if(!use_gpu) {
+		//use CPU
 		vector<int> inliers;
-		CV_PROFILE("solvePnPRansac",cv::solvePnPRansac(ppcloud, imgPoints, K, distortion_coeff, rvec, t, true, 350, 8.0, 0.5 * imgPoints.size(), inliers);)
-		//cv::solvePnP(ppcloud, imgPoints, K, distcoeff, rvec, t, true, CV_EPNP);
+		CV_PROFILE("solvePnPRansac",cv::solvePnPRansac(ppcloud, imgPoints, K, distortion_coeff, rvec, t, true, 1000, 10.0, 0.25 * (double)(imgPoints.size()), inliers, CV_EPNP);)
+		//CV_PROFILE("solvePnP",cv::solvePnP(ppcloud, imgPoints, K, distortion_coeff, rvec, t, true, CV_EPNP);)
 
 		vector<cv::Point2f> projected3D;
 		cv::projectPoints(ppcloud, rvec, t, K, distortion_coeff, projected3D);
+		if(inliers.size()==0) { //get inliers
+			for(int i=0;i<projected3D.size();i++) {
+				if(norm(projected3D[i]-imgPoints[i]) < 20.0)
+					inliers.push_back(i);
+			}
+		}
 
 		cv::Mat reprojected; imgs_orig[working_view].copyTo(reprojected);
 		for (int ppt=0; ppt<inliers.size(); ppt++) {
 			cv::line(reprojected,imgPoints[inliers[ppt]],projected3D[inliers[ppt]],cv::Scalar(0,0,255),1);
 		}
-		for(int ppt=0;ppt<imgPoints.size();ppt++) {
-			cv::line(reprojected,imgPoints[ppt],projected3D[ppt],cv::Scalar(0,0,255),1);
-		}
+		//for(int ppt=0;ppt<imgPoints.size();ppt++) {
+		//	cv::line(reprojected,imgPoints[ppt],projected3D[ppt],cv::Scalar(0,0,255),1);
+		//}
 		for(int ppt=0;ppt<imgPoints.size();ppt++) {
 			cv::circle(reprojected, imgPoints[ppt], 2, cv::Scalar(255,0,0), CV_FILLED);
 			cv::circle(reprojected, projected3D[ppt], 2, cv::Scalar(0,255,0), CV_FILLED);			
 		}
-		stringstream ss; ss << "inliers " << inliers.size();
+		for (int ppt=0; ppt<inliers.size(); ppt++) {
+			cv::circle(reprojected, imgPoints[inliers[ppt]], 2, cv::Scalar(255,255,0), CV_FILLED);
+		}
+		stringstream ss; ss << "inliers " << inliers.size() << " / " << projected3D.size();
 		putText(reprojected, ss.str(), cv::Point(5,20), CV_FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0,255,255), 2);
 
 		cv::imshow("__tmp", reprojected);
 		cv::waitKey(0);
 		cv::destroyWindow("__tmp");
 
-		if(inliers.size() < imgPoints.size()/2) {
-			cerr << "not enough inliers to consider a good pose" << endl;
+		cv::Rodrigues(rvec, R);
+		visualizerShowCamera(R,t,0,255,0,0.1);
+
+		if(inliers.size() < (double)(imgPoints.size())/4.0) {
+			cerr << "not enough inliers to consider a good pose ("<<inliers.size()<<"/"<<imgPoints.size()<<")"<< endl;
 			return false;
 		}
 	} else {
@@ -354,22 +365,15 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 	std::cout << "======================== Depth Recovery Start ========================\n";
 	std::cout << "======================================================================\n";
 	
-	cv::Matx34d P(1,0,0,0,
-				  0,1,0,0,
-				  0,0,1,0);
-
 	GetBaseLineTriangulation();
+	//pointcloud_beforeBA = pcloud;
+	//GetRGBForPointCloud(pcloud,pointCloudRGB_beforeBA);
+	AdjustCurrentBundle();
 	//pointcloud = pcloud;
 	//GetRGBForPointCloud(pcloud,pointCloudRGB);
 	//return;
 	
-	AdjustCurrentBundle();
-	
-	cout << "using new camera matrix " << cam_matrix << endl;
-	
 	cv::Matx34d P1 = Pmats[m_second_view];
-	
-
 	cv::Mat_<double> t = (cv::Mat_<double>(1,3) << P1(0,3), P1(1,3), P1(2,3));
 	cv::Mat_<double> R = (cv::Mat_<double>(3,3) << P1(0,0), P1(0,1), P1(0,2), 
 												   P1(1,0), P1(1,1), P1(1,2), 
@@ -385,14 +389,11 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 		bool pose_estimated = FindPoseEstimation(i,rvec,t,R);
 		if(!pose_estimated)
 			continue;
-	
 
-		P1 = cv::Matx34d(R(0,0),R(0,1),R(0,2),t(0),
-						 R(1,0),R(1,1),R(1,2),t(1),
-						 R(2,0),R(2,1),R(2,2),t(2));
 		//store estimated pose	
-		Pmats[i] = P1;
-		
+		Pmats[i] = cv::Matx34d	(R(0,0),R(0,1),R(0,2),t(0),
+								 R(1,0),R(1,1),R(1,2),t(1),
+								 R(2,0),R(2,1),R(2,2),t(2));
 		
 		// start triangulating with previous views
 		for (int view = i-1; view >= 0; view--) 
@@ -413,11 +414,10 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 
 			break;
 		}
-
 		
+		//AdjustCurrentBundle();
 	}
 	
-	AdjustCurrentBundle();
 
 	cout << "======================================================================\n";
 	cout << "========================= Depth Recovery DONE ========================\n";
