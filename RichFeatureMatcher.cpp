@@ -70,29 +70,22 @@ void RichFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* mat
 	if (matches == NULL) {
 		matches = &matches_;
 	}
+	double max_dist = 0; double min_dist = 1000.0;
 	if (matches->size() == 0) {
 		vector<vector<DMatch> > nn_matches;
 		matcher.knnMatch(descriptors_1,descriptors_2,nn_matches,1);
 		matches->clear();
 		for(int i=0;i<nn_matches.size();i++) {
-			if(nn_matches[i].size()>0)
+			if(nn_matches[i].size()>0) {
 				matches->push_back(nn_matches[i][0]);
+				double dist = matches->back().distance;
+				if( dist < min_dist ) min_dist = dist;
+				if( dist > max_dist ) max_dist = dist;
+			}
 		}
-
-		//matcher.match( descriptors_1, descriptors_2, *matches );
 	}
-
+	
 	return;
-	
-	double max_dist = 0; double min_dist = 1000.0;
-	//-- Quick calculation of max and min distances between keypoints
-	for(unsigned int i = 0; i < matches->size(); i++ )
-	{ 
-		double dist = (*matches)[i].distance;
-		if( dist < min_dist ) min_dist = dist;
-		if( dist > max_dist ) max_dist = dist;
-	}
-	
 #ifdef __SFM__DEBUG__
 	printf("-- Max dist : %f \n", max_dist );
 	printf("-- Min dist : %f \n", min_dist );
@@ -100,7 +93,7 @@ void RichFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* mat
 	
 	vector<KeyPoint> imgpts1_good,imgpts2_good;
 	
-	if (min_dist <= 0) {
+	if (min_dist < 10.0) {
 		min_dist = 10.0;
 	}
 	
