@@ -212,7 +212,7 @@ bool MultiCameraPnP::FindPoseEstimation(
 		cv::Rodrigues(rvec, R);
 		visualizerShowCamera(R,t,0,255,0,0.1);
 
-		if(inliers.size() < (double)(imgPoints.size())/4.0) {
+		if(inliers.size() < (double)(imgPoints.size())/5.0) {
 			cerr << "not enough inliers to consider a good pose ("<<inliers.size()<<"/"<<imgPoints.size()<<")"<< endl;
 			return false;
 		}
@@ -396,7 +396,7 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 	AdjustCurrentBundle();
 	//pointcloud = pcloud;
 	//GetRGBForPointCloud(pcloud,pointCloudRGB);
-	return;
+	//return;
 	
 	cv::Matx34d P1 = Pmats[m_second_view];
 	cv::Mat_<double> t = (cv::Mat_<double>(1,3) << P1(0,3), P1(1,3), P1(2,3));

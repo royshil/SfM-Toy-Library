@@ -63,7 +63,7 @@ void DecomposeEssentialUsingHorn90(double _E[9], double _R1[9], double _R2[9], d
 	Matrix3d cofactors; cofactors.col(0) = e1e2; cofactors.col(1) = e2e0; cofactors.col(2) = e0e1;
 	cofactors.transposeInPlace();
 	
-	//B = [b]_x , see Horn90 (6)
+	//B = [b]_x , see Horn90 (6) and http://en.wikipedia.org/wiki/Cross_product#Conversion_to_matrix_multiplication
 	Matrix3d B1; B1 <<	0,-b1(2),b1(1),
 						b1(2),0,-b1(0),
 						-b1(1),b1(0),0;
@@ -74,10 +74,10 @@ void DecomposeEssentialUsingHorn90(double _E[9], double _R1[9], double _R2[9], d
 	Map<Matrix<double,3,3,RowMajor> > R1(_R1),R2(_R2);
 
 	//Horn90 (24)
-	R2 = (cofactors.transpose() - B1*E) / b1.dot(b1);
-	R1 = (cofactors.transpose() - B2*E) / b2.dot(b2);
+	R1 = (cofactors.transpose() - B1*E) / b1.dot(b1);
+	R2 = (cofactors.transpose() - B2*E) / b2.dot(b2);
 	Map<Vector3d> t1(_t1),t2(_t2); 
-	t1 = b2; t2 = b1;
+	t1 = b1; t2 = b2;
 	
 	cout << "Horn90 provided " << endl << R1 << endl << "and" << endl << R2 << endl;
 }
@@ -90,16 +90,16 @@ bool CheckCoherentRotation(cv::Mat_<double>& R) {
 	//	std::cout << "rotation is probably not coherent.." << std::endl;
 	//	return false;	//skip triangulation
 	//}
-	Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> > eR(R[0]);
-	if(eR(2,0) < -0.9)
-	{
-		cout << "rotate 180deg (PI rad) on Y" << endl;
+	//Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> > eR(R[0]);
+	//if(eR(2,0) < -0.9)
+	//{
+	//	cout << "rotate 180deg (PI rad) on Y" << endl;
 
-		cout << "before" << endl << eR << endl;
-		Eigen::AngleAxisd aad(-M_PI/2.0,Eigen::Vector3d::UnitY());
-		eR *= aad.toRotationMatrix();
-		cout << "after" << endl << eR << endl;
-	}
+	//	cout << "before" << endl << eR << endl;
+	//	Eigen::AngleAxisd aad(-M_PI/2.0,Eigen::Vector3d::UnitY());
+	//	eR *= aad.toRotationMatrix();
+	//	cout << "after" << endl << eR << endl;
+	//}
 	//if(eR(0,0) < -0.9) {
 	//	cout << "flip right vector" << endl;
 	//	eR.row(0) = -eR.row(0);
@@ -235,7 +235,74 @@ bool TestTriangulation(const vector<CloudPoint>& pcloud) {
 	}
 	double percentage = ((double)count / (double)pcloud.size());
 	cout << count << "/" << pcloud.size() << " = " << percentage*100.0 << "% are in front of camera" << endl;
-	return percentage > 0.75; //allow only 25% "outliers"
+	if(percentage < 0.75)
+		return false; //less than 75% of the points are in front of the camera
+
+	//check for coplanarity of points
+	{
+		cv::Mat_<double> cldm(pcloud.size(),3);
+		for(unsigned int i=0;i<pcloud.size();i++) {
+			cldm.row(i)(0) = pcloud[i].pt.x;
+			cldm.row(i)(1) = pcloud[i].pt.y;
+			cldm.row(i)(2) = pcloud[i].pt.z;
+		}
+		cv::Mat_<double> mean;
+		cv::PCA pca(cldm,mean,CV_PCA_DATA_AS_ROW);
+
+		double p_to_plane_thresh = 2.0;
+		int num_inliers = 0;
+		cv::Vec3d nrm = pca.eigenvectors.row(2); nrm = nrm / norm(nrm);
+		cv::Vec3d x0 = pca.mean;
+		//double d = - nrm[0]*x0[0] - nrm[1]*x0[1] - nrm[2]*x0[2];
+
+		for (int i=0; i<pcloud.size(); i++) {
+			double D = nrm.dot(x0 - Vec3d(pcloud[i].pt));
+			if(D < p_to_plane_thresh) num_inliers++;
+		}
+
+		cout << num_inliers << "/" << pcloud.size() << " are coplanar" << endl;
+		if((double)num_inliers / (double)(pcloud.size()) > 0.9)
+			return false;
+	}
+
+	return true;
+}
+
+void DecomposeEtoRandT(
+	Mat_<double>& E,
+	Mat_<double>& R1,
+	Mat_<double>& R2,
+	Mat_<double>& t1,
+	Mat_<double>& t2) 
+{
+#ifdef DECOMPOSE_SVD
+	//Using HZ E decomposition
+	Mat svd_u, svd_vt, svd_w;
+	TakeSVDOfE(E,svd_u,svd_vt,svd_w);
+
+	//check if first and second singular values are the same (as they should be)
+	double singular_values_ratio = fabsf(svd_w.at<double>(0) / svd_w.at<double>(1));
+	if(singular_values_ratio>1.0) singular_values_ratio = 1.0/singular_values_ratio; // flip ratio to keep it [0,1]
+	if (singular_values_ratio < 0.7) {
+		cout << "singular values are too far apart\n";
+		P1 = 0; 
+		return false;
+	}
+
+	Matx33d W(0,-1,0,	//HZ 9.13
+		1,0,0,
+		0,0,1);
+	Matx33d Wt(0,1,0,
+		-1,0,0,
+		0,0,1);
+	R1 = svd_u * Mat(W) * svd_vt; //HZ 9.19
+	R2 = svd_u * Mat(Wt) * svd_vt; //HZ 9.19
+	t1 = svd_u.col(2); //u3
+	t2 = svd_u.col(2); //u3
+#else
+	//Using Horn E decomposition
+	DecomposeEssentialUsingHorn90(E[0],R1[0],R2[0],t1[0],t2[0]);
+#endif
 }
 
 bool FindCameraMatrices(const Mat& K, 
@@ -276,46 +343,21 @@ bool FindCameraMatrices(const Mat& K,
 			return false;
 		}
 		
+		Mat_<double> R1(3,3);
+		Mat_<double> R2(3,3);
+		Mat_<double> t1(1,3);
+		Mat_<double> t2(1,3);
+
 		//decompose E to P' , HZ (9.19)
 		{			
-#ifdef DECOMPOSE_SVD
-			Mat svd_u, svd_vt, svd_w;
-			TakeSVDOfE(E,svd_u,svd_vt,svd_w);
+			DecomposeEtoRandT(E,R1,R2,t1,t2);
 
-			//check if first and second singular values are the same (as they should be)
-			double singular_values_ratio = fabsf(svd_w.at<double>(0) / svd_w.at<double>(1));
-			if(singular_values_ratio>1.0) singular_values_ratio = 1.0/singular_values_ratio; // flip ratio to keep it [0,1]
-			if (singular_values_ratio < 0.7) {
-				cout << "singular values are too far apart\n";
-				P1 = 0; 
-				return false;
+			if(determinant(R1)+1.0 < 1e-09) {
+				//according to http://en.wikipedia.org/wiki/Essential_matrix#Showing_that_it_is_valid
+				cout << "det(R) == -1 ["<<determinant(R1)<<"]: flip E's sign" << endl;
+				E = -E;
+				DecomposeEtoRandT(E,R1,R2,t1,t2);
 			}
-												
-			Matx33d W(0,-1,0,	//HZ 9.13
-					  1,0,0,
-					  0,0,1);
-			Matx33d Wt(0,1,0,
-					   -1,0,0,
-					   0,0,1);
-			Mat_<double> R1 = svd_u * Mat(W) * svd_vt; //HZ 9.19
-			Mat_<double> R2 = svd_u * Mat(Wt) * svd_vt; //HZ 9.19
-			Mat_<double> t1 = svd_u.col(2); //u3
-			Mat_<double> t2 = svd_u.col(2); //u3
-#else
-			Mat_<double> R1(3,3);
-			Mat_<double> R2(3,3);
-			Mat_<double> t1(1,3);
-			Mat_<double> t2(1,3);
-			DecomposeEssentialUsingHorn90(E[0],R1[0],R2[0],t1[0],t2[0]);
-#endif
-//			if(determinant(R)+1.0 < 1e-09) {
-//				//according to http://en.wikipedia.org/wiki/Essential_matrix#Showing_that_it_is_valid
-//				cout << "det(R) == -1 ["<<determinant(R)<<"]: flip E's sign" << endl;
-//				E = -E;
-//				TakeSVDOfE(E, svd_u, svd_vt, svd_w);
-//				R = svd_u * Mat(W) * svd_vt;
-//				t = svd_u.col(2);
-//			}
 			if (!CheckCoherentRotation(R1)) {
 				cout << "resulting rotation is not coherent\n";
 				P1 = 0;

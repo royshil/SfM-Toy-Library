@@ -114,15 +114,11 @@ bool hasEnding (std::string const &fullString, std::string const &ending)
     }
 }
 
-bool hasEndingLower (string const &fullString_, string const &ending)
+bool hasEndingLower (string const &fullString_, string const &_ending)
 {
-	string fullstring = fullString_;
+	string fullstring = fullString_, ending = _ending;
 	transform(fullString_.begin(),fullString_.end(),fullstring.begin(),::tolower); // to lower
-    if (fullstring.length() >= ending.length()) {
-        return (0 == fullstring.compare (fullstring.length() - ending.length(), ending.length(), ending));
-    } else {
-        return false;
-    }
+	return hasEnding(fullstring,ending);
 }
 
 void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor) {

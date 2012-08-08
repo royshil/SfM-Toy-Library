@@ -86,10 +86,10 @@ int main(int argc, char** argv) {
 		}
 		cv::Mat_<double> mean;
 		cv::PCA pca(cldm,mean,CV_PCA_DATA_AS_ROW);
-		scale_cameras_down = pca.eigenvalues.at<double>(0);
-		if (scale_cameras_down > 1.0) {
-			scale_cameras_down = 1.0/scale_cameras_down;
-		}
+		scale_cameras_down = pca.eigenvalues.at<double>(0) / 20.0;
+		//if (scale_cameras_down > 1.0) {
+		//	scale_cameras_down = 1.0/scale_cameras_down;
+		//}
 	}
 
 	vector<cv::Matx34d> v = distance->getCameras();
