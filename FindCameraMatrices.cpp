@@ -249,26 +249,28 @@ bool TestTriangulation(const vector<CloudPoint>& pcloud) {
 		cv::Mat_<double> mean;
 		cv::PCA pca(cldm,mean,CV_PCA_DATA_AS_ROW);
 
-		double p_to_plane_thresh = 2.0;
 		int num_inliers = 0;
 		cv::Vec3d nrm = pca.eigenvectors.row(2); nrm = nrm / norm(nrm);
 		cv::Vec3d x0 = pca.mean;
-		//double d = - nrm[0]*x0[0] - nrm[1]*x0[1] - nrm[2]*x0[2];
+		double p_to_plane_thresh = pca.eigenvalues.at<double>(2);
 
 		for (int i=0; i<pcloud.size(); i++) {
-			double D = nrm.dot(x0 - Vec3d(pcloud[i].pt));
+			Vec3d w = Vec3d(pcloud[i].pt) - x0;
+			double D = fabs(nrm.dot(w));
 			if(D < p_to_plane_thresh) num_inliers++;
 		}
 
 		cout << num_inliers << "/" << pcloud.size() << " are coplanar" << endl;
-		if((double)num_inliers / (double)(pcloud.size()) > 0.9)
+		if((double)num_inliers / (double)(pcloud.size()) < 0.9)
 			return false;
 	}
 
 	return true;
 }
 
-void DecomposeEtoRandT(
+//#define DECOMPOSE_SVD
+
+bool DecomposeEtoRandT(
 	Mat_<double>& E,
 	Mat_<double>& R1,
 	Mat_<double>& R2,
@@ -285,7 +287,6 @@ void DecomposeEtoRandT(
 	if(singular_values_ratio>1.0) singular_values_ratio = 1.0/singular_values_ratio; // flip ratio to keep it [0,1]
 	if (singular_values_ratio < 0.7) {
 		cout << "singular values are too far apart\n";
-		P1 = 0; 
 		return false;
 	}
 
@@ -298,10 +299,11 @@ void DecomposeEtoRandT(
 	R1 = svd_u * Mat(W) * svd_vt; //HZ 9.19
 	R2 = svd_u * Mat(Wt) * svd_vt; //HZ 9.19
 	t1 = svd_u.col(2); //u3
-	t2 = svd_u.col(2); //u3
+	t2 = -svd_u.col(2); //u3
 #else
 	//Using Horn E decomposition
 	DecomposeEssentialUsingHorn90(E[0],R1[0],R2[0],t1[0],t2[0]);
+	return true;
 #endif
 }
 
@@ -350,7 +352,7 @@ bool FindCameraMatrices(const Mat& K,
 
 		//decompose E to P' , HZ (9.19)
 		{			
-			DecomposeEtoRandT(E,R1,R2,t1,t2);
+			if (!DecomposeEtoRandT(E,R1,R2,t1,t2)) return false;
 
 			if(determinant(R1)+1.0 < 1e-09) {
 				//according to http://en.wikipedia.org/wiki/Essential_matrix#Showing_that_it_is_valid
