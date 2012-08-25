@@ -391,11 +391,7 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 	std::cout << "======================================================================\n";
 	
 	GetBaseLineTriangulation();
-	//pointcloud_beforeBA = pcloud;
-	//GetRGBForPointCloud(pcloud,pointCloudRGB_beforeBA);
-	AdjustCurrentBundle();
-	//pointcloud = pcloud;
-	//GetRGBForPointCloud(pcloud,pointCloudRGB);
+	//AdjustCurrentBundle();
 	//return;
 	
 	cv::Matx34d P1 = Pmats[m_second_view];
@@ -437,12 +433,11 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 			}
 			std::cout << " after " << pcloud.size() << std::endl;
 
-			break;
+			//break;
 		}
-		
-		//AdjustCurrentBundle();
 	}
 	
+	AdjustCurrentBundle();
 
 	cout << "======================================================================\n";
 	cout << "========================= Depth Recovery DONE ========================\n";

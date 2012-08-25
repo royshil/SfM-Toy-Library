@@ -261,14 +261,14 @@ bool TestTriangulation(const vector<CloudPoint>& pcloud) {
 		}
 
 		cout << num_inliers << "/" << pcloud.size() << " are coplanar" << endl;
-		if((double)num_inliers / (double)(pcloud.size()) < 0.9)
+		if((double)num_inliers / (double)(pcloud.size()) > 0.85)
 			return false;
 	}
 
 	return true;
 }
 
-//#define DECOMPOSE_SVD
+#define DECOMPOSE_SVD
 
 bool DecomposeEtoRandT(
 	Mat_<double>& E,
