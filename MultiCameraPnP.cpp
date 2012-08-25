@@ -11,9 +11,14 @@
 #include "MultiCameraPnP.h"
 #include "BundleAdjuster.h"
 
+#include <list>
+#include <set>
+
 using namespace std;
 
 #include <opencv2/gpu/gpu.hpp>
+
+bool sort_by_first(pair<int,pair<int,int> > a, pair<int,pair<int,int> > b) { return a.first < b.first; }
 
 /**
  * Get an initial 3D point cloud from 2 views only
@@ -29,54 +34,66 @@ void MultiCameraPnP::GetBaseLineTriangulation() {
 				   0,0,1,0);
 	
 	std::vector<CloudPoint> tmp_pcloud;
-	
+
+	//sort pairwise matches to find the highest match [Snavely07 4.2]
+	list<pair<int,pair<int,int> > > matches_sizes;
+	for(std::map<std::pair<int,int> ,std::vector<cv::DMatch> >::iterator i = matches_matrix.begin(); i != matches_matrix.end(); ++i) {
+		matches_sizes.push_back(make_pair((*i).second.size(),(*i).first));
+	}
+	matches_sizes.sort(sort_by_first);
+
 	//Reconstruct from two views
 	bool goodF = false;
-	m_first_view = m_second_view = 0; //start with 0th and 1st views
-	while (!goodF && m_first_view < (imgpts.size()-1)) {
-		m_second_view = m_first_view + 1;
-		while (!goodF && m_second_view < imgpts.size()) {
-			std::cout << " -------- " << imgs_names[m_first_view] << " and " << imgs_names[m_second_view] << " -------- " <<std::endl;
-			//what if reconstrcution of first two views is bad? fallback to another pair
-			//See if the Fundamental Matrix between these two views is good
-			goodF = FindCameraMatrices(K, Kinv, distortion_coeff,
-									   imgpts[m_first_view], 
-									   imgpts[m_second_view], 
-									   imgpts_good[m_first_view],
-									   imgpts_good[m_second_view], 
-									   P, 
-									   P1,
-									   matches_matrix[std::make_pair(m_first_view,m_second_view)],
-									   tmp_pcloud
+	int highest_pair = 0;
+	m_first_view = m_second_view = 0;
+	//reverse iterate by number of matches
+	for(list<pair<int,pair<int,int> > >::reverse_iterator highest_pair = matches_sizes.rbegin(); 
+		highest_pair != matches_sizes.rend() && !goodF; 
+		++highest_pair) 
+	{
+		m_second_view = (*highest_pair).second.second;
+		m_first_view  = (*highest_pair).second.first;
+
+		std::cout << " -------- " << imgs_names[m_first_view] << " and " << imgs_names[m_second_view] << " -------- " <<std::endl;
+		//what if reconstrcution of first two views is bad? fallback to another pair
+		//See if the Fundamental Matrix between these two views is good
+		goodF = FindCameraMatrices(K, Kinv, distortion_coeff,
+			imgpts[m_first_view], 
+			imgpts[m_second_view], 
+			imgpts_good[m_first_view],
+			imgpts_good[m_second_view], 
+			P, 
+			P1,
+			matches_matrix[std::make_pair(m_first_view,m_second_view)],
+			tmp_pcloud
 #ifdef __SFM__DEBUG__
-									   ,imgs[m_first_view],imgs[m_second_view]
+			,imgs[m_first_view],imgs[m_second_view]
 #endif
-									   );
-			if (!goodF) {
-				m_second_view++; //go to the next view...
+		);
+		if (!goodF) {
+			m_second_view++; //go to the next view...
+		} else {
+			vector<CloudPoint> new_triangulated;
+			vector<int> add_to_cloud;
+
+			Pmats[m_first_view] = P;
+			Pmats[m_second_view] = P1;
+
+			bool good_triangulation = TriangulatePointsBetweenViews(m_second_view,m_first_view,new_triangulated,add_to_cloud);
+			if(!good_triangulation) {
+				std::cout << "triangulation failed" << std::endl;
+				goodF = false;
+				Pmats[m_first_view] = 0;
+				Pmats[m_second_view] = 0;
+				m_second_view++;
 			} else {
-				vector<CloudPoint> new_triangulated;
-				vector<int> add_to_cloud;
-
-				Pmats[m_first_view] = P;
-				Pmats[m_second_view] = P1;
-
-				bool good_triangulation = TriangulatePointsBetweenViews(m_second_view,m_first_view,new_triangulated,add_to_cloud);
-				if(!good_triangulation) {
-					std::cout << "triangulation failed" << std::endl;
-					goodF = false;
-					Pmats[m_first_view] = 0;
-					Pmats[m_second_view] = 0;
-					m_second_view++;
-				} else {
-					std::cout << "before triangulation: " << pcloud.size();
-					for (unsigned int j=0; j<add_to_cloud.size(); j++) {
-						if(add_to_cloud[j] == 1)
-							pcloud.push_back(new_triangulated[j]);
-					}
-					std::cout << " after " << pcloud.size() << std::endl;
-				}				
-			}
+				std::cout << "before triangulation: " << pcloud.size();
+				for (unsigned int j=0; j<add_to_cloud.size(); j++) {
+					if(add_to_cloud[j] == 1)
+						pcloud.push_back(new_triangulated[j]);
+				}
+				std::cout << " after " << pcloud.size() << std::endl;
+			}				
 		}
 		if (!goodF) {
 			m_first_view++;
@@ -401,11 +418,30 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 												   P1(2,0), P1(2,1), P1(2,2));
 	cv::Mat_<double> rvec(1,3); Rodrigues(R, rvec);
 	
+	set<int> done_views;
+	done_views.insert(m_first_view);
+	done_views.insert(m_second_view);
+
 	//loop images to incrementally recover more cameras 
-	for (unsigned int i=0; i < imgs.size(); i++) {
-		if(i==m_second_view || i==m_first_view) continue; //baseline is already in cloud...
+	//for (unsigned int i=0; i < imgs.size(); i++) 
+	while (done_views.size() != imgs.size())
+	{
+		//find image with highest 2d-3d correspondance [Snavely07 4.2]
+		unsigned int max_2d3d_view = -1, max_2d3d_count = 0;
+		for (unsigned int i=0; i < imgs.size(); i++) {
+			if(done_views.find(i) != done_views.end()) continue; //already done with this view
+
+			vector<cv::Point3f> tmp3d; vector<cv::Point2f> tmp2d;
+			Find2D3DCorrespondences(i,tmp3d,tmp2d);
+			if(tmp3d.size() > max_2d3d_count) {
+				max_2d3d_count = tmp3d.size();
+				max_2d3d_view = i;
+			}
+		}
+		int i = max_2d3d_view;
 
 		std::cout << "-------------------------- " << imgs_names[i] << " --------------------------\n";
+		done_views.insert(i); // don't repeat it for now
 
 		bool pose_estimated = FindPoseEstimation(i,rvec,t,R);
 		if(!pose_estimated)

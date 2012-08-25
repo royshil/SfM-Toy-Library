@@ -70,7 +70,8 @@ void RichFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* mat
 	if (matches == NULL) {
 		matches = &matches_;
 	}
-	double max_dist = 0; double min_dist = 1000.0;
+	
+	vector<double> dists;
 	if (matches->size() == 0) {
 		vector<vector<DMatch> > nn_matches;
 		matcher.knnMatch(descriptors_1,descriptors_2,nn_matches,1);
@@ -79,13 +80,16 @@ void RichFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* mat
 			if(nn_matches[i].size()>0) {
 				matches->push_back(nn_matches[i][0]);
 				double dist = matches->back().distance;
-				if( dist < min_dist ) min_dist = dist;
-				if( dist > max_dist ) max_dist = dist;
+				if(fabs(dist) > 10000) dist = 1.0;
+				matches->back().distance = dist;
+				dists.push_back(dist);
 			}
 		}
 	}
 	
-	return;
+	double max_dist = 0; double min_dist = 0.0;
+	cv::minMaxIdx(dists,&min_dist,&max_dist);
+	
 #ifdef __SFM__DEBUG__
 	printf("-- Max dist : %f \n", max_dist );
 	printf("-- Min dist : %f \n", min_dist );
@@ -107,17 +111,24 @@ void RichFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* mat
 			(*matches)[i].trainIdx = (*matches)[i].imgIdx;
 		}
 		
-		if( existing_trainIdx.find((*matches)[i].trainIdx) == existing_trainIdx.end() && 
-		   (*matches)[i].trainIdx >= 0 && (*matches)[i].trainIdx < (int)(keypoints_2.size()) &&
-		   (*matches)[i].distance > 0.0 && (*matches)[i].distance < cutoff ) 
-		{
-			good_matches_.push_back( (*matches)[i]);
-			imgpts1_good.push_back(keypoints_1[(*matches)[i].queryIdx]);
-			imgpts2_good.push_back(keypoints_2[(*matches)[i].trainIdx]);
-			existing_trainIdx.insert((*matches)[i].trainIdx);
+		int tidx = (*matches)[i].trainIdx;
+		if((*matches)[i].distance > 0.0 && (*matches)[i].distance < cutoff) {
+			if( existing_trainIdx.find(tidx) == existing_trainIdx.end() && 
+			   tidx >= 0 && tidx < (int)(keypoints_2.size()) ) 
+			{
+				good_matches_.push_back( (*matches)[i]);
+				//imgpts1_good.push_back(keypoints_1[(*matches)[i].queryIdx]);
+				//imgpts2_good.push_back(keypoints_2[tidx]);
+				existing_trainIdx.insert(tidx);
+			}
 		}
 	}
-	
+
+	cout << "Keep " << good_matches_.size() << " out of " << matches->size() << " matches" << endl;
+
+	*matches = good_matches_;
+
+	return;
 	
 #ifdef __SFM__DEBUG__
 	cout << "keypoints_1.size() " << keypoints_1.size() << " imgpts1_good.size() " << imgpts1_good.size() << endl;

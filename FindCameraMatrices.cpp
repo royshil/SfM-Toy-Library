@@ -159,7 +159,9 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 		cout << "pts1 " << pts1.size() << " (orig pts " << imgpts1_good.size() << ")" << endl;
 		cout << "pts2 " << pts2.size() << " (orig pts " << imgpts2_good.size() << ")" << endl;
 #endif
-		F = findFundamentalMat(pts1, pts2, FM_RANSAC, 3.0, 0.99, status);
+		double minVal,maxVal;
+		cv::minMaxIdx(pts1,&minVal,&maxVal);
+		F = findFundamentalMat(pts1, pts2, FM_RANSAC, 0.006 * maxVal, 0.99, status);
 	}
 	
 	vector<DMatch> new_matches;
