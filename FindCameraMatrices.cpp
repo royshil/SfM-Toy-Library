@@ -18,9 +18,11 @@
 using namespace cv;
 using namespace std;
 
-//#define USE_EIGEN 1
-
 #include <Eigen/Eigen>
+
+#ifndef CV_PCA_DATA_AS_ROW
+#define CV_PCA_DATA_AS_ROW 0
+#endif
 
 void DecomposeEssentialUsingHorn90(double _E[9], double _R1[9], double _R2[9], double _t1[3], double _t2[3]) {
 	//from : http://people.csail.mit.edu/bkph/articles/Essential.pdf
@@ -161,7 +163,7 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 #endif
 		double minVal,maxVal;
 		cv::minMaxIdx(pts1,&minVal,&maxVal);
-		F = findFundamentalMat(pts1, pts2, FM_RANSAC, 0.006 * maxVal, 0.99, status);
+		F = findFundamentalMat(pts1, pts2, FM_RANSAC, 0.006 * maxVal, 0.99, status); //threshold from [Snavely07 4.1]
 	}
 	
 	vector<DMatch> new_matches;
@@ -201,17 +203,17 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 	return F;
 }
 
-void TakeSVDOfE(Mat& E, Mat& svd_u, Mat& svd_vt, Mat& svd_w) {
-#ifndef USE_EIGEN
+void TakeSVDOfE(Mat_<double>& E, Mat& svd_u, Mat& svd_vt, Mat& svd_w) {
+#if 0
+	//Using OpenCV's SVD
 	SVD svd(E,SVD::MODIFY_A);
 	svd_u = svd.u;
 	svd_vt = svd.vt;
 	svd_w = svd.w;
 #else
+	//Using Eigen's SVD
 	cout << "Eigen3 SVD..\n";
-	Eigen::Matrix3f  e;   e << E(0,0), E(0,1), E(0,2),
-	E(1,0), E(1,1), E(1,2),
-	E(2,0), E(2,1), E(2,2);
+	Eigen::Matrix3f  e = Eigen::Map<Eigen::Matrix<double,3,3,Eigen::RowMajor> >((double*)E.data).cast<float>();
 	Eigen::JacobiSVD<Eigen::MatrixXf> svd(e, Eigen::ComputeThinU | Eigen::ComputeThinV);
 	Eigen::MatrixXf Esvd_u = svd.matrixU();
 	Eigen::MatrixXf Esvd_v = svd.matrixV();
@@ -241,6 +243,7 @@ bool TestTriangulation(const vector<CloudPoint>& pcloud) {
 		return false; //less than 75% of the points are in front of the camera
 
 	//check for coplanarity of points
+	if(false) //not
 	{
 		cv::Mat_<double> cldm(pcloud.size(),3);
 		for(unsigned int i=0;i<pcloud.size();i++) {
@@ -254,7 +257,7 @@ bool TestTriangulation(const vector<CloudPoint>& pcloud) {
 		int num_inliers = 0;
 		cv::Vec3d nrm = pca.eigenvectors.row(2); nrm = nrm / norm(nrm);
 		cv::Vec3d x0 = pca.mean;
-		double p_to_plane_thresh = pca.eigenvalues.at<double>(2);
+		double p_to_plane_thresh = sqrt(pca.eigenvalues.at<double>(2));
 
 		for (int i=0; i<pcloud.size(); i++) {
 			Vec3d w = Vec3d(pcloud[i].pt) - x0;

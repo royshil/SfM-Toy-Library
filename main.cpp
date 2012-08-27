@@ -78,6 +78,7 @@ int main(int argc, char** argv) {
 	double scale_cameras_down = 1.0;
 	{
 		vector<cv::Point3d> cld = distance->getPointCloud();
+		if (cld.size()==0) cld = distance->getPointCloudBeforeBA();
 		cv::Mat_<double> cldm(cld.size(),3);
 		for(unsigned int i=0;i<cld.size();i++) {
 			cldm.row(i)(0) = cld[i].x;

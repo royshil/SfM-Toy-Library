@@ -49,11 +49,8 @@ private:
 		std::vector<struct CloudPoint>& new_triangulated,
 		std::vector<int>& add_to_cloud
 		);
-	void GetRGBForPointCloud(
-		const std::vector<struct CloudPoint>& pcloud,
-		std::vector<cv::Vec3b>& RGBforCloud
-		);
+	
+	int FindHomographyInliers2Views(int vi, int vj);
 	int m_first_view;
 	int m_second_view; //baseline's second view other to 0
-	std::vector<CloudPoint> pcloud;
 };

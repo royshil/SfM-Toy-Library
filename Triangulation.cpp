@@ -133,6 +133,7 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 	unsigned int pts_size = pt_set1.size();
 	
 #if 0
+	//Using OpenCV's triangulation
 	//convert to Point2f
 	vector<Point2f> _pt_set1_pt,_pt_set2_pt;
 	KeyPointsToPoints(pt_set1,_pt_set1_pt);
@@ -165,6 +166,7 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 		reproj_error.push_back(norm(_pt_set1_pt[i]-reprojected_pt_set1[i]));
 	}
 #else
+	Mat_<double> KP1 = K * Mat(P1);
 #pragma omp parallel for num_threads(1)
 	for (int i=0; i<pts_size; i++) {
 		Point2f kp = pt_set1[i].pt; 
@@ -184,16 +186,18 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 //		cout <<	"P1 * Point: " << x << endl;
 //		Mat_<double> xPt = (Mat_<double>(3,1) << x(0),x(1),x(2));
 //		cout <<	"Point: " << xPt << endl;
-		Mat_<double> xPt_img = K * Mat(P1) * X;
+		Mat_<double> xPt_img = KP1 * X;
 //		cout <<	"Point * K: " << xPt_img << endl;
 		Point2f xPt_img_(xPt_img(0)/xPt_img(2),xPt_img(1)/xPt_img(2));
 				
 #pragma omp critical
 		{
-			reproj_error.push_back(norm(xPt_img_-kp1));
+			double reprj_err = norm(xPt_img_-kp1);
+			reproj_error.push_back(reprj_err);
 
 			CloudPoint cp; 
 			cp.pt = Point3d(X(0),X(1),X(2));
+			cp.reprojection_error = reprj_err;
 			
 			pointcloud.push_back(cp);
 			correspImg1Pt.push_back(pt_set1[i]);

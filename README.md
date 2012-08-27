@@ -44,3 +44,7 @@ Execute
 2. Modeling the World from Internet Photo Collections, N. Snavely, S. M. Seitz, R. Szeliski, IJCV 2007 [http://phototour.cs.washington.edu/ModelingTheWorld_ijcv07.pdf]
 3. Triangulation, R.I. Hartley, P. Strum, 1997, Computer vision and image understanding
 4. Recovering baseline and orientation from essential matrix, B.K.P. Horn, 1990, J. Optical Society of America [http://people.csail.mit.edu/bkph/articles/Essential_Old.pdf]
+
+## Troubleshooting
+
+- If you get linker errors "mismatch detected for '_ITERATOR_DEBUG_LEVEL': value '0' doesn't match value '2' in Visualization.obj", you must make sure you are compiling vs. the right VTK static libs (Debug have "-gd" postfix, Release don't).

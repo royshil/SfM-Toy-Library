@@ -119,13 +119,28 @@ void MultiCameraDistance::OnlyMatchFeatures(int strategy)
 	features_matched = true;
 }
 
-//bool MultiCameraDistance::CheckCoherentRotation(cv::Mat_<double>& R) {
-////	std::cout << "R; " << R << std::endl;
-//	double s = cv::norm(R,cv::Mat_<double>::eye(3,3),cv::NORM_L1);
-////	std::cout << "Distance from I: " << s << std::endl;
-//	if (s > 2.3) { // norm of R from I is large -> probably bad rotation
-//		std::cout << "rotation is probably not coherent.." << std::endl;
-//		return false;	//skip triangulation
-//	}
-//	return true;
-//}
+void MultiCameraDistance::GetRGBForPointCloud(
+	const std::vector<struct CloudPoint>& _pcloud,
+	std::vector<cv::Vec3b>& RGBforCloud
+	) 
+{
+	for (unsigned int i=0; i<_pcloud.size(); i++) {
+		//pointcloud_beforeBA.push_back(_pcloud[i]);
+		unsigned int good_view = 0;
+		for(; good_view < imgs_orig.size(); good_view++) {
+			if(_pcloud[i].imgpt_for_img[good_view] != -1) {
+				int pt_idx = _pcloud[i].imgpt_for_img[good_view];
+				if(pt_idx >= imgpts[good_view].size()) {
+					std::cerr << "BUG: point id:" << pt_idx << " should not exist for img #" << good_view << " which has only " << imgpts[good_view].size() << std::endl;
+					continue;
+				}
+				cv::Point _pt = imgpts[good_view][pt_idx].pt;
+				assert(good_view < imgs_orig.size() && _pt.x < imgs_orig[good_view].cols && _pt.y < imgs_orig[good_view].rows);
+				RGBforCloud.push_back(imgs_orig[good_view].at<cv::Vec3b>(_pt));
+				break;
+			}
+		}
+		if(good_view == imgs.size()) //nothing found.. put red dot
+			RGBforCloud.push_back(cv::Vec3b(255,0,0));
+	}
+}

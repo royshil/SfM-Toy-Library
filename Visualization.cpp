@@ -297,7 +297,7 @@ void PopulatePCLPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& mycloud
 	for (unsigned int i=0; i<pointcloud.size(); i++) {
 		// get the RGB color value for the point
 		cv::Vec3b rgbv(255,255,255);
-		if (pointcloud_RGB.size() >= i) {
+		if (pointcloud_RGB.size() > i) {
 			rgbv = pointcloud_RGB[i];
 		}
 

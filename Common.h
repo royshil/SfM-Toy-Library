@@ -18,6 +18,7 @@
 struct CloudPoint {
 	cv::Point3d pt;
 	std::vector<int> imgpt_for_img;
+	double reprojection_error;
 };
 
 std::vector<cv::DMatch> FlipMatches(const std::vector<cv::DMatch>& matches);

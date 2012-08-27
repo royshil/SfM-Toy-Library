@@ -130,6 +130,7 @@ void RichFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* mat
 
 	return;
 	
+#if 0
 #ifdef __SFM__DEBUG__
 	cout << "keypoints_1.size() " << keypoints_1.size() << " imgpts1_good.size() " << imgpts1_good.size() << endl;
 	cout << "keypoints_2.size() " << keypoints_2.size() << " imgpts2_good.size() " << imgpts2_good.size() << endl;
@@ -168,5 +169,6 @@ void RichFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* mat
 		waitKey(100);
 		destroyWindow("Good Matches");
 	}
+#endif
 #endif
 }
