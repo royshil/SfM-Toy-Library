@@ -58,15 +58,8 @@ namespace
 	}
 } // end namespace <>
 
-
-void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud, 
-								  Mat& cam_matrix,
-								  const std::vector<std::vector<cv::KeyPoint> >& imgpts,
-								  std::map<int ,cv::Matx34d>& Pmats
-								) 
-{
-	int N = Pmats.size(), M = pointcloud.size();
-	
+//count number of 2D measurements
+int BundleAdjuster::Count2DMeasurements(const vector<CloudPoint>& pointcloud) {
 	int K = 0;
 	for (unsigned int i=0; i<pointcloud.size(); i++) {
 		for (unsigned int ii=0; ii<pointcloud[i].imgpt_for_img.size(); ii++) {
@@ -75,18 +68,29 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 			}
 		}
 	}
+	return K;
+}
+
+void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud, 
+								  Mat& cam_matrix,
+								  const std::vector<std::vector<cv::KeyPoint> >& imgpts,
+								  std::map<int ,cv::Matx34d>& Pmats
+								) 
+{
+	int N = Pmats.size(), M = pointcloud.size(), K = Count2DMeasurements(pointcloud);
 	
 	cout << "N (cams) = " << N << " M (points) = " << M << " K (measurements) = " << K << endl;
 	
 	StdDistortionFunction distortion;
 	
+	//conver camera intrinsics to BA datastructs
 	Matrix3x3d KMat;
 	makeIdentityMatrix(KMat);
-	KMat[0][0] = cam_matrix.at<double>(0,0);
-	KMat[0][1] = cam_matrix.at<double>(0,1);
-	KMat[0][2] = cam_matrix.at<double>(0,2);
-	KMat[1][1] = cam_matrix.at<double>(1,1);
-	KMat[1][2] = cam_matrix.at<double>(1,2);
+	KMat[0][0] = cam_matrix.at<double>(0,0); //fx
+	KMat[1][1] = cam_matrix.at<double>(1,1); //fy
+	KMat[0][1] = cam_matrix.at<double>(0,1); //skew
+	KMat[0][2] = cam_matrix.at<double>(0,2); //ppx
+	KMat[1][2] = cam_matrix.at<double>(1,2); //ppy
 	
 	double const f0 = KMat[0][0];
 	cout << "intrinsic before bundle = "; displayMatrix(KMat);
@@ -98,6 +102,7 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 	vector<int> pointIdFwdMap(M);
 	map<int, int> pointIdBwdMap;
 	
+	//conver 3D point cloud to BA datastructs
 	vector<Vector3d > Xs(M);
 	for (int j = 0; j < M; ++j)
 	{
@@ -113,6 +118,7 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 	vector<int> camIdFwdMap(N,-1);
 	map<int, int> camIdBwdMap;
 	
+	//convert cameras to BA datastructs
 	vector<CameraMatrix> cams(N);
 	for (int i = 0; i < N; ++i)
 	{
@@ -143,6 +149,7 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 	correspondingView.reserve(K);
 	correspondingPoint.reserve(K);
 	
+	//convert 2D measurements to BA datastructs
 	for (unsigned int k = 0; k < pointcloud.size(); ++k)
 	{
 		for (unsigned int i=0; i<pointcloud[k].imgpt_for_img.size(); i++) {
@@ -207,27 +214,29 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 	
 	{
 		
-		Vector3d mean(0.0, 0.0, 0.0);
-		for (unsigned int j = 0; j < Xs.size(); ++j) addVectorsIP(Xs[j], mean);
-		scaleVectorIP(1.0/Xs.size(), mean);
+		//Vector3d mean(0.0, 0.0, 0.0);
+		//for (unsigned int j = 0; j < Xs.size(); ++j) addVectorsIP(Xs[j], mean);
+		//scaleVectorIP(1.0/Xs.size(), mean);
+		//
+		//vector<float> norms(Xs.size());
+		//for (unsigned int j = 0; j < Xs.size(); ++j)
+		//	norms[j] = distance_L2(Xs[j], mean);
+		//
+		//std::sort(norms.begin(), norms.end());
+		//float distThr = norms[int(norms.size() * 0.9f)];
+		//cout << "90% quantile distance: " << distThr << endl;
 		
-		vector<float> norms(Xs.size());
-		for (unsigned int j = 0; j < Xs.size(); ++j)
-			norms[j] = distance_L2(Xs[j], mean);
-		
-		std::sort(norms.begin(), norms.end());
-		float distThr = norms[int(norms.size() * 0.9f)];
-		cout << "90% quantile distance: " << distThr << endl;
-		
+		//extract 3D points
 		for (unsigned int j = 0; j < Xs.size(); ++j)
 		{
-			if (distance_L2(Xs[j], mean) > 3*distThr) makeZeroVector(Xs[j]);
+			//if (distance_L2(Xs[j], mean) > 3*distThr) makeZeroVector(Xs[j]);
 			
 			pointcloud[j].pt.x = Xs[j][0];
 			pointcloud[j].pt.y = Xs[j][1];
 			pointcloud[j].pt.z = Xs[j][2];
 		}
 		
+		//extract adjusted cameras
 		for (int i = 0; i < N; ++i)
 		{
 			Matrix3x3d R = cams[i].getRotation();
@@ -241,6 +250,8 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 			Pmats[i] = P;
 		}
 		
+
+		//TODO: extract camera intrinsics
 //		cam_matrix.at<double>(0,0) = Knew[0][0];
 //		cam_matrix.at<double>(0,1) = Knew[0][1];
 //		cam_matrix.at<double>(0,2) = Knew[0][2];

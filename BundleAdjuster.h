@@ -17,4 +17,6 @@ public:
 					  cv::Mat& cam_matrix,
 					  const std::vector<std::vector<cv::KeyPoint> >& imgpts,
 					  std::map<int ,cv::Matx34d>& Pmats);
+private:
+	int Count2DMeasurements(const std::vector<CloudPoint>& pointcloud);
 };

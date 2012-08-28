@@ -412,7 +412,7 @@ void MultiCameraPnP::AdjustCurrentBundle() {
 
 void MultiCameraPnP::PruneMatchesBasedOnF() {
 	//prune the match between <_i> and all views using the Fundamental matrix to prune
-//#pragma omp parallel for
+#pragma omp parallel for
 	for (int _i=0; _i < imgs.size() - 1; _i++)
 	{
 		for (unsigned int _j=_i+1; _j < imgs.size(); _j++) {
