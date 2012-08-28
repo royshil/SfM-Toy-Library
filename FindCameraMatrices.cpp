@@ -188,7 +188,7 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 	
 	//-- Draw only "good" matches
 #ifdef __SFM__DEBUG__
-	{
+	if(!img_1.empty() && !img_2.empty()) {
 		Mat img_matches;
 		drawMatches( img_1, keypoints_1, img_2, keypoints_2,
 					good_matches_, img_matches, Scalar::all(-1), Scalar::all(-1),
@@ -204,7 +204,7 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 }
 
 void TakeSVDOfE(Mat_<double>& E, Mat& svd_u, Mat& svd_vt, Mat& svd_w) {
-#if 0
+#if 1
 	//Using OpenCV's SVD
 	SVD svd(E,SVD::MODIFY_A);
 	svd_u = svd.u;
@@ -335,10 +335,14 @@ bool FindCameraMatrices(const Mat& K,
 		double t = getTickCount();
 		
 		Mat F = GetFundamentalMat(imgpts1,imgpts2,imgpts1_good,imgpts2_good,matches
-#ifdef __SFM__DEBUG__
-								  ,img_1,img_2
-#endif
+//#ifdef __SFM__DEBUG__
+//								  ,img_1,img_2
+//#endif
 								  );
+		if(matches.size() < 100) { // || ((double)imgpts1_good.size() / (double)imgpts1.size()) < 0.25
+			cerr << "not enough inliers after F matrix" << endl;
+			return false;
+		}
 		
 		//Essential matrix: compute then extract cameras [R|t]
 		Mat_<double> E = K.t() * F * K; //according to HZ (9.12)

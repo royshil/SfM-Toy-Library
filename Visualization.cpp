@@ -62,7 +62,8 @@ inline float* Eigen2float6(Eigen::Vector3f v, Eigen::Vector3f rgb) { static floa
 inline Matrix<float,6,1> Eigen2Eigen(Vector3f v, Vector3f rgb) { return (Matrix<float,6,1>() << v[0],v[1],v[2],rgb[0],rgb[1],rgb[2]).finished(); }
 inline std::vector<Matrix<float,6,1> > AsVector(const Matrix<float,6,1>& p1, const Matrix<float,6,1>& p2) { 	std::vector<Matrix<float,6,1> > v(2); v[0] = p1; v[1] = p2; return v; }
 
-void visualizerShowCamera(const Matrix3f& R, const Vector3f& t, float r, float g, float b, double s = 0.01 /*downscale factor*/) {
+void visualizerShowCamera(const Matrix3f& R, const Vector3f& _t, float r, float g, float b, double s = 0.01 /*downscale factor*/) {
+	Vector3f t = -R.transpose() * _t;
 
 	Vector3f vright = R.row(0).normalized() * s;
 	Vector3f vup = -R.row(1).normalized() * s;
@@ -99,7 +100,7 @@ void visualizerShowCamera(const float R[9], const float t[3], float r, float g, 
 	visualizerShowCamera(Matrix3f(R).transpose(),Vector3f(t),r,g,b,s);
 }
 void visualizerShowCamera(const cv::Matx33f& R, const cv::Vec3f& t, float r, float g, float b, double s) {
-	visualizerShowCamera(Matrix3f(R.val).transpose(),Vector3f(t.val),r,g,b,s);
+	visualizerShowCamera(Matrix<float,3,3,RowMajor>(R.val),Vector3f(t.val),r,g,b,s);
 }
 /////////////////////////////////////////////////////////////////////////////////
 
