@@ -6,10 +6,12 @@ To compile use CMake: http://www.cmake.org
 
 Prerequisite
 - OpenCV: http://opencv.willowgarage.com/wiki/
-- SSBA & Sparsesuite: http://www.inf.ethz.ch/personal/chzach/opensource.html
+- SSBA & Sparsesuite: http://www.inf.ethz.ch/personal/chzach/opensource.html (bundeled with the library in the '3rdparty' directory)
 - FLTK 3.x (Optional for GUI): http://www.fltk.org/
 
 ### How to make
+
+- You must build SSBA-3.0 first, by compiling it from '3rdparty' directory
 
 On MacOS
 
