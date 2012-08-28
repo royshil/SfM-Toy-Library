@@ -1,0 +1,43 @@
+set(SSBA_LIBRARY_DIR SSBA_LIBRARY_DIR-NOT_FOUND CACHE PATH "Directory to find SSBA libs")
+
+link_directories(
+	${SSBA_LIBRARY_DIR}
+	)
+
+include_directories(
+	${SSBA_LIBRARY_DIR}/../
+	)
+
+set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
+
+# Core functions of SfM
+file(GLOB SFM_LIB_SOURCES	
+	Distance.* 
+	Triangulation.* 
+	FeatureMatching.*
+	FindCameraMatrices.*
+	MultiCameraDistance.*
+	IDistance.*
+	MultiCameraPnP.*
+	Common.*
+	IFeatureMatcher.*
+	RichFeatureMatcher.*
+	OFFeatureMatcher.*
+	BundleAdjuster.*
+	GPUSURFFeatureMatcher.*
+	AbstractFeatureMatcher.*
+)
+
+add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )
+target_link_libraries(SfMToyLibrary 
+	V3D 
+	COLAMD
+	)
+
+if(MSVC)
+	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "/openmp")
+endif()
+if(APPLE)
+	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "-fopenmp")
+	set_target_properties(SfMToyLibrary PROPERTIES LINK_FLAGS "-fopenmp")
+endif()

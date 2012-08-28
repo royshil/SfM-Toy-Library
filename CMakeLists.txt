@@ -6,6 +6,8 @@ find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(OpenMP REQUIRED)
 
+add_subdirectory(SfMToyLib)
+
 ############ Find FLTK ############
 if(NOT DEFINED FLTK_PATH)
     file(GLOB_RECURSE FLTK_PATH "${CMAKE_SOURCE_DIR}/Widget.h")
@@ -37,12 +39,9 @@ IF(APPLE)
 	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -F/usr/local/lib -L/opt/local/lib -fopenmp")
 ENDIF(APPLE)
 
-set(SSBA_LIBRARY_DIR SSBA_LIBRARY_DIR-NOT_FOUND CACHE PATH "Directory to find SSBA libs")
-
 link_directories(
 	${PCL_LIBRARY_DIRS} 
 	${FLTK_LIB_DIR} 
-	${SSBA_LIBRARY_DIR}
 	)
 	
 add_definitions(${PCL_DEFINITIONS})
@@ -50,42 +49,7 @@ add_definitions(${PCL_DEFINITIONS})
 include_directories(
 	${FLTK_INCLUDE_DIR} 
 	${PCL_INCLUDE_DIRS} 
-	${SSBA_LIBRARY_DIR}/../
 	)
-
-set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
-
-# Core functions of SfM
-file(GLOB SFM_LIB_SOURCES	
-	Distance.* 
-	Triangulation.* 
-	FeatureMatching.*
-	FindCameraMatrices.*
-	MultiCameraDistance.*
-	IDistance.*
-	MultiCameraPnP.*
-	Common.*
-	IFeatureMatcher.*
-	RichFeatureMatcher.*
-	OFFeatureMatcher.*
-	BundleAdjuster.*
-	GPUSURFFeatureMatcher.*
-	AbstractFeatureMatcher.*
-)
-
-add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )
-target_link_libraries(SfMToyLibrary 
-	V3D 
-	COLAMD
-	)
-
-if(MSVC)
-	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "/openmp")
-endif()
-if(APPLE)
-	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "-fopenmp")
-	set_target_properties(SfMToyLibrary PROPERTIES LINK_FLAGS "-fopenmp")
-endif()
 
 # GUI part
 IF( NOT ${FLTK-NOTFOUND} )
