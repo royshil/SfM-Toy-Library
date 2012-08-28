@@ -1,12 +1,12 @@
 project(SfMToyExample)
 cmake_minimum_required(VERSION 2.8)
 
-find_package(PCL REQUIRED)
-
 find_package(OpenCV REQUIRED)
 find_package(OpenMP REQUIRED)
 
 add_subdirectory(SfMToyLib)
+
+find_package(PCL REQUIRED)
 
 ############ Find FLTK ############
 if(NOT DEFINED FLTK_PATH)
@@ -49,6 +49,7 @@ add_definitions(${PCL_DEFINITIONS})
 include_directories(
 	${FLTK_INCLUDE_DIR} 
 	${PCL_INCLUDE_DIRS} 
+	SfMToyLib
 	)
 
 # GUI part

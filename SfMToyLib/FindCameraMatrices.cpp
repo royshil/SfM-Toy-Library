@@ -18,7 +18,11 @@
 using namespace cv;
 using namespace std;
 
+#ifdef USE_EIGEN
 #include <Eigen/Eigen>
+#endif
+
+#define DECOMPOSE_SVD
 
 #ifndef CV_PCA_DATA_AS_ROW
 #define CV_PCA_DATA_AS_ROW 0
@@ -26,6 +30,7 @@ using namespace std;
 
 void DecomposeEssentialUsingHorn90(double _E[9], double _R1[9], double _R2[9], double _t1[3], double _t2[3]) {
 	//from : http://people.csail.mit.edu/bkph/articles/Essential.pdf
+#ifdef USE_EIGEN
 	using namespace Eigen;
 
 	Matrix3d E = Map<Matrix<double,3,3,RowMajor> >(_E);
@@ -82,6 +87,7 @@ void DecomposeEssentialUsingHorn90(double _E[9], double _R1[9], double _R2[9], d
 	t1 = b1; t2 = b2;
 	
 	cout << "Horn90 provided " << endl << R1 << endl << "and" << endl << R2 << endl;
+#endif
 }
 
 bool CheckCoherentRotation(cv::Mat_<double>& R) {
@@ -272,8 +278,6 @@ bool TestTriangulation(const vector<CloudPoint>& pcloud) {
 
 	return true;
 }
-
-#define DECOMPOSE_SVD
 
 bool DecomposeEtoRandT(
 	Mat_<double>& E,

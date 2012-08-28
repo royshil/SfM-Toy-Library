@@ -9,9 +9,6 @@
 #pragma once
 
 #include "MultiCameraDistance.h"
-
-#include "Visualization.h"
-
 #include "Common.h"
 
 class MultiCameraPnP : public MultiCameraDistance {

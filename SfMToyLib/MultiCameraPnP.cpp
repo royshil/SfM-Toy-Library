@@ -256,8 +256,8 @@ bool MultiCameraPnP::FindPoseEstimation(
 	cv::waitKey(0);
 	cv::destroyWindow("__tmp");
 
-	cv::Rodrigues(rvec, R);
-	visualizerShowCamera(R,t,0,255,0,0.1);
+	//cv::Rodrigues(rvec, R);
+	//visualizerShowCamera(R,t,0,255,0,0.1);
 
 	if(inliers.size() < (double)(imgPoints.size())/5.0) {
 		cerr << "not enough inliers to consider a good pose ("<<inliers.size()<<"/"<<imgPoints.size()<<")"<< endl;
@@ -277,6 +277,7 @@ bool MultiCameraPnP::FindPoseEstimation(
 	}
 
 	std::cout << "found t = " << t << "\nR = \n"<<R<<std::endl;
+	return true;
 }
 
 bool MultiCameraPnP::TriangulatePointsBetweenViews(
