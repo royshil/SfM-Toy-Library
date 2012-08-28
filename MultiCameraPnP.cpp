@@ -11,9 +11,6 @@
 #include "MultiCameraPnP.h"
 #include "BundleAdjuster.h"
 
-#include <list>
-#include <set>
-
 using namespace std;
 
 #include <opencv2/gpu/gpu.hpp>
@@ -167,10 +164,9 @@ void MultiCameraPnP::Find2D3DCorrespondences(int working_view,
 	ppcloud.clear(); imgPoints.clear();
 
 	vector<int> pcloud_status(pcloud.size(),0);
-	for (int old_view = imgs.size()-1; old_view >= 0; old_view--)
+	for (set<int>::iterator done_view = good_views.begin(); done_view != good_views.end(); ++done_view) 
 	{
-		if(old_view == working_view) continue;
-
+		int old_view = *done_view;
 		//check for matches_from_old_to_working between i'th frame and <old_view>'th frame (and thus the current cloud)
 		std::vector<cv::DMatch> matches_from_old_to_working = matches_matrix[std::make_pair(old_view,working_view)];
 
@@ -219,7 +215,7 @@ bool MultiCameraPnP::FindPoseEstimation(
 	if(!use_gpu) {
 		//use CPU
 		double minVal,maxVal; cv::minMaxIdx(imgPoints,&minVal,&maxVal);
-		CV_PROFILE("solvePnPRansac",cv::solvePnPRansac(ppcloud, imgPoints, K, distortion_coeff, rvec, t, true, 1000, 0.004 * maxVal, 0.25 * (double)(imgPoints.size()), inliers, CV_EPNP);)
+		CV_PROFILE("solvePnPRansac",cv::solvePnPRansac(ppcloud, imgPoints, K, distortion_coeff, rvec, t, true, 1000, 0.006 * maxVal, 0.25 * (double)(imgPoints.size()), inliers, CV_EPNP);)
 		//CV_PROFILE("solvePnP",cv::solvePnP(ppcloud, imgPoints, K, distortion_coeff, rvec, t, true, CV_EPNP);)
 	} else {
 		//use GPU ransac
@@ -245,12 +241,12 @@ bool MultiCameraPnP::FindPoseEstimation(
 	}
 
 	cv::Mat reprojected; imgs_orig[working_view].copyTo(reprojected);
+	for(int ppt=0;ppt<imgPoints.size();ppt++) {
+		cv::line(reprojected,imgPoints[ppt],projected3D[ppt],cv::Scalar(0,0,255),1);
+	}
 	for (int ppt=0; ppt<inliers.size(); ppt++) {
 		cv::line(reprojected,imgPoints[inliers[ppt]],projected3D[inliers[ppt]],cv::Scalar(0,0,255),1);
 	}
-	//for(int ppt=0;ppt<imgPoints.size();ppt++) {
-	//	cv::line(reprojected,imgPoints[ppt],projected3D[ppt],cv::Scalar(0,0,255),1);
-	//}
 	for(int ppt=0;ppt<imgPoints.size();ppt++) {
 		cv::circle(reprojected, imgPoints[ppt], 2, cv::Scalar(255,0,0), CV_FILLED);
 		cv::circle(reprojected, projected3D[ppt], 2, cv::Scalar(0,255,0), CV_FILLED);			
@@ -325,16 +321,26 @@ bool MultiCameraPnP::TriangulatePointsBetweenViews(
 	std::sort(reprj_errors.begin(),reprj_errors.end());
 	double reprj_err_cutoff = reprj_errors[4 * reprj_errors.size() / 5] * 2.4; //threshold from Snavely07 4.2
 	vector<CloudPoint> new_triangulated_filtered;
+	std::vector<cv::DMatch> new_matches;
 	for(int i=0;i<new_triangulated.size();i++) {
-		if(new_triangulated[i].reprojection_error > 16.0)
-			continue;
+		if(new_triangulated[i].reprojection_error > 16.0) {
+			continue; //reject point
+		} 
 		if(new_triangulated[i].reprojection_error < 4.0 ||
-			new_triangulated[i].reprojection_error < reprj_err_cutoff)
+			new_triangulated[i].reprojection_error < reprj_err_cutoff) 
+		{
 			new_triangulated_filtered.push_back(new_triangulated[i]);
+			new_matches.push_back(matches[i]);
+		} 
+		else 
+		{
+			continue;
+		}
 	}
 	cout << "filtered out " << (new_triangulated.size() - new_triangulated_filtered.size()) << " high-error points" << endl;
 	new_triangulated = new_triangulated_filtered;
-
+	matches = new_matches;
+	matches_matrix[std::make_pair(older_view,working_view)] = new_matches; //just to make sure, remove if unneccesary
 
 	add_to_cloud.clear();
 	add_to_cloud.resize(new_triangulated.size(),1);
@@ -391,7 +397,7 @@ bool MultiCameraPnP::TriangulatePointsBetweenViews(
 			}
 		}
 	}
-	std::cout << found_other_views_count << "/" << matches.size() << " points were found in other views, adding " << cv::countNonZero(add_to_cloud) << " new\n";
+	std::cout << found_other_views_count << "/" << new_triangulated.size() << " points were found in other views, adding " << cv::countNonZero(add_to_cloud) << " new\n";
 	return true;
 }
 
@@ -411,7 +417,8 @@ void MultiCameraPnP::AdjustCurrentBundle() {
 
 void MultiCameraPnP::PruneMatchesBasedOnF() {
 	//prune the match between <_i> and all views using the Fundamental matrix to prune
-	for (unsigned int _i=0; _i < imgs.size() - 1; _i++)
+#pragma omp parallel for
+	for (int _i=0; _i < imgs.size() - 1; _i++)
 	{
 		for (unsigned int _j=_i+1; _j < imgs.size(); _j++) {
 			int older_view = _i, working_view = _j;
@@ -423,6 +430,7 @@ void MultiCameraPnP::PruneMatchesBasedOnF() {
 				matches_matrix[std::make_pair(older_view,working_view)]
 			);
 			//update flip matches as well
+#pragma omp critical
 			matches_matrix[std::make_pair(working_view,older_view)] = FlipMatches(matches_matrix[std::make_pair(older_view,working_view)]);
 		}
 	}
@@ -448,7 +456,6 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 												   P1(2,0), P1(2,1), P1(2,2));
 	cv::Mat_<double> rvec(1,3); Rodrigues(R, rvec);
 	
-	set<int> done_views,good_views;
 	done_views.insert(m_first_view);
 	done_views.insert(m_second_view);
 	good_views.insert(m_first_view);

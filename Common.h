@@ -14,6 +14,8 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <vector>
 #include <iostream>
+#include <list>
+#include <set>
 
 struct CloudPoint {
 	cv::Point3d pt;

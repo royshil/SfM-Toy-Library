@@ -54,4 +54,6 @@ private:
 	int FindHomographyInliers2Views(int vi, int vj);
 	int m_first_view;
 	int m_second_view; //baseline's second view other to 0
+	std::set<int> done_views;
+	std::set<int> good_views;
 };
