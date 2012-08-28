@@ -308,8 +308,8 @@ bool DecomposeEtoRandT(
 #else
 	//Using Horn E decomposition
 	DecomposeEssentialUsingHorn90(E[0],R1[0],R2[0],t1[0],t2[0]);
-	return true;
 #endif
+	return true;
 }
 
 bool FindCameraMatrices(const Mat& K, 

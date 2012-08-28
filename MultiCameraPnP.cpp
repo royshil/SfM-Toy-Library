@@ -341,7 +341,7 @@ bool MultiCameraPnP::TriangulatePointsBetweenViews(
 	new_triangulated = new_triangulated_filtered;
 	matches = new_matches;
 	matches_matrix[std::make_pair(older_view,working_view)] = new_matches; //just to make sure, remove if unneccesary
-
+	matches_matrix[std::make_pair(working_view,older_view)] = FlipMatches(new_matches);
 	add_to_cloud.clear();
 	add_to_cloud.resize(new_triangulated.size(),1);
 	int found_other_views_count = 0;
