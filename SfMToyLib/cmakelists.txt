@@ -35,15 +35,18 @@ file(GLOB SFM_LIB_SOURCES
 )
 
 add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )
-target_link_libraries(SfMToyLibrary 
-	V3D 
-	COLAMD
-	)
 
 if(MSVC)
 	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "/openmp")
+	target_link_libraries(SfMToyLibrary V3D COLAMD )
 endif()
 if(APPLE)
+	# default is to build SSBA as static libs...
+	target_link_libraries(SfMToyLibrary 
+		"${SSBA_LIBRARY_DIR}/libV3D.a" 
+		"${SSBA_LIBRARY_DIR}/libCOLAMD.a"
+		)
+		
 	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "-fopenmp")
 	set_target_properties(SfMToyLibrary PROPERTIES LINK_FLAGS "-fopenmp")
 endif()

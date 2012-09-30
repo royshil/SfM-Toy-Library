@@ -8,7 +8,9 @@
 
 #include <vector>
 
+#ifdef WIN32
 #include "win32config.h"
+#endif
 
 namespace V3D
 {

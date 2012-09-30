@@ -43,6 +43,7 @@ Execute
 ### Datasets
 
 Here's a place with some standard datasets for SfM: http://cvlab.epfl.ch/~strecha/multiview/denseMVS.html
+Also, you can use the "Crazy Horse" (A national memorial site in South Dakota) dataset, that I pictured myself, included in the repo.
 
 ## References
 
