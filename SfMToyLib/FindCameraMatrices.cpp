@@ -152,10 +152,6 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 		imgpts2_tmp = imgpts2;
 	} else {
 		GetAlignedPointsFromMatch(imgpts1, imgpts2, matches, imgpts1_tmp, imgpts2_tmp);
-		//			for (unsigned int i=0; i<matches.size(); i++) {
-		//				imgpts1_tmp.push_back(imgpts1[matches[i].queryIdx]);
-		//				imgpts2_tmp.push_back(imgpts2[matches[i].trainIdx]);
-		//			}
 	}
 	
 	Mat F;
@@ -164,8 +160,8 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 		KeyPointsToPoints(imgpts1_tmp, pts1);
 		KeyPointsToPoints(imgpts2_tmp, pts2);
 #ifdef __SFM__DEBUG__
-		cout << "pts1 " << pts1.size() << " (orig pts " << imgpts1_good.size() << ")" << endl;
-		cout << "pts2 " << pts2.size() << " (orig pts " << imgpts2_good.size() << ")" << endl;
+		cout << "pts1 " << pts1.size() << " (orig pts " << imgpts1_tmp.size() << ")" << endl;
+		cout << "pts2 " << pts2.size() << " (orig pts " << imgpts2_tmp.size() << ")" << endl;
 #endif
 		double minVal,maxVal;
 		cv::minMaxIdx(pts1,&minVal,&maxVal);
@@ -180,7 +176,8 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 			imgpts1_good.push_back(imgpts1_tmp[i]);
 			imgpts2_good.push_back(imgpts2_tmp[i]);
 
-			new_matches.push_back(DMatch(matches[i].queryIdx,matches[i].trainIdx,matches[i].distance));
+			//new_matches.push_back(DMatch(matches[i].queryIdx,matches[i].trainIdx,matches[i].distance));
+			new_matches.push_back(matches[i]);
 #ifdef __SFM__DEBUG__
 			good_matches_.push_back(DMatch(imgpts1_good.size()-1,imgpts1_good.size()-1,1.0));
 			keypoints_1.push_back(imgpts1_tmp[i]);
@@ -189,22 +186,41 @@ Mat GetFundamentalMat(const vector<KeyPoint>& imgpts1,
 		}
 	}	
 	
-	cout << matches.size() << " matches before, " << new_matches.size() << " new matches\n";
+	cout << matches.size() << " matches before, " << new_matches.size() << " new matches after Fundamental Matrix\n";
 	matches = new_matches; //keep only those points who survived the fundamental matrix
 	
+#if 0
 	//-- Draw only "good" matches
 #ifdef __SFM__DEBUG__
-	if(!img_1.empty() && !img_2.empty()) {
-		Mat img_matches;
-		drawMatches( img_1, keypoints_1, img_2, keypoints_2,
-					good_matches_, img_matches, Scalar::all(-1), Scalar::all(-1),
-					vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );		
-		//-- Show detected matches
-		imshow( "Good Matches", img_matches );
-		waitKey(0);
-		destroyWindow("Good Matches");
+	if(!img_1.empty() && !img_2.empty()) {		
+		vector<Point2f> i_pts,j_pts;
+		Mat img_orig_matches;
+		{ //draw original features in red
+			vector<uchar> vstatus(imgpts1_tmp.size(),1);
+			vector<float> verror(imgpts1_tmp.size(),1.0);
+			img_1.copyTo(img_orig_matches);
+			KeyPointsToPoints(imgpts1_tmp, i_pts);
+			KeyPointsToPoints(imgpts2_tmp, j_pts);
+			drawArrows(img_orig_matches, i_pts, j_pts, vstatus, verror, Scalar(0,0,255));
+		}
+		{ //superimpose filtered features in green
+			vector<uchar> vstatus(imgpts1_good.size(),1);
+			vector<float> verror(imgpts1_good.size(),1.0);
+			i_pts.resize(imgpts1_good.size());
+			j_pts.resize(imgpts2_good.size());
+			KeyPointsToPoints(imgpts1_good, i_pts);
+			KeyPointsToPoints(imgpts2_good, j_pts);
+			drawArrows(img_orig_matches, i_pts, j_pts, vstatus, verror, Scalar(0,255,0));
+			imshow( "Filtered Matches", img_orig_matches );
+		}
+		int c = waitKey(0);
+		if (c=='s') {
+			imwrite("fundamental_mat_matches.png", img_orig_matches);
+		}
+		destroyWindow("Filtered Matches");
 	}
 #endif		
+#endif
 	
 	return F;
 }

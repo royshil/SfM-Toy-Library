@@ -235,6 +235,8 @@ bool MultiCameraPnP::FindPoseEstimation(
 		}
 	}
 
+#if 0
+	//display reprojected points and matches
 	cv::Mat reprojected; imgs_orig[working_view].copyTo(reprojected);
 	for(int ppt=0;ppt<imgPoints.size();ppt++) {
 		cv::line(reprojected,imgPoints[ppt],projected3D[ppt],cv::Scalar(0,0,255),1);
@@ -255,7 +257,7 @@ bool MultiCameraPnP::FindPoseEstimation(
 	cv::imshow("__tmp", reprojected);
 	cv::waitKey(0);
 	cv::destroyWindow("__tmp");
-
+#endif
 	//cv::Rodrigues(rvec, R);
 	//visualizerShowCamera(R,t,0,255,0,0.1);
 
@@ -297,25 +299,25 @@ bool MultiCameraPnP::TriangulatePointsBetweenViews(
 	std::vector<cv::DMatch> matches = matches_matrix[std::make_pair(older_view,working_view)];
 	GetAlignedPointsFromMatch(imgpts[older_view],imgpts[working_view],matches,pt_set1,pt_set2);
 
-	unsigned int start_i = pcloud.size();
-
 
 	//adding more triangulated points to general cloud
 	double reproj_error = TriangulatePoints(pt_set1, pt_set2, Kinv, distortion_coeff, P, P1, new_triangulated, correspImg1Pt);
 	std::cout << "triangulation reproj error " << reproj_error << std::endl;
 
-	if(reproj_error > 20.0) {
-		// somethign went awry, delete those triangulated points
-		//				pcloud.resize(start_i);
-		cerr << "reprojection error too high, don't include these points."<<endl;
-		return false;
-	}
+//	if(reproj_error > 20.0) {
+//		// somethign went awry, delete those triangulated points
+//		//				pcloud.resize(start_i);
+//		cerr << "reprojection error too high, don't include these points."<<endl;
+//		return false;
+//	}
 
 	//filter out outlier points with high reprojection
 	vector<double> reprj_errors;
 	for(int i=0;i<new_triangulated.size();i++) { reprj_errors.push_back(new_triangulated[i].reprojection_error); }
 	std::sort(reprj_errors.begin(),reprj_errors.end());
+	//get the 80% precentile
 	double reprj_err_cutoff = reprj_errors[4 * reprj_errors.size() / 5] * 2.4; //threshold from Snavely07 4.2
+	
 	vector<CloudPoint> new_triangulated_filtered;
 	std::vector<cv::DMatch> new_matches;
 	for(int i=0;i<new_triangulated.size();i++) {
@@ -413,7 +415,7 @@ void MultiCameraPnP::AdjustCurrentBundle() {
 
 void MultiCameraPnP::PruneMatchesBasedOnF() {
 	//prune the match between <_i> and all views using the Fundamental matrix to prune
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (int _i=0; _i < imgs.size() - 1; _i++)
 	{
 		for (unsigned int _j=_i+1; _j < imgs.size(); _j++) {
@@ -424,6 +426,9 @@ void MultiCameraPnP::PruneMatchesBasedOnF() {
 				imgpts_good[older_view],
 				imgpts_good[working_view], 
 				matches_matrix[std::make_pair(older_view,working_view)]
+#ifdef __SFM__DEBUG__
+				,imgs_orig[older_view],imgs_orig[working_view]
+#endif
 			);
 			//update flip matches as well
 #pragma omp critical

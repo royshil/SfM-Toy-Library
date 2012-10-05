@@ -129,6 +129,9 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 		Mat img_matches; cvtColor(imgs[idx_i],img_matches,CV_GRAY2BGR);
 		i_pts.clear(); j_pts.clear();
 		for(int i=0;i<matches->size();i++) {
+			//if (i%2 != 0) {
+//				continue;
+//			}
 			Point i_pt = imgpts[idx_i][(*matches)[i].queryIdx].pt;
 			Point j_pt = imgpts[idx_j][(*matches)[i].trainIdx].pt;
 			i_pts.push_back(i_pt);
@@ -138,10 +141,13 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 		drawArrows(img_matches, i_pts, j_pts, vstatus, verror, Scalar(0,255));
 		stringstream ss; 
 		ss << matches->size() << " matches";
-		putText(img_matches,ss.str(),Point(10,20),CV_FONT_HERSHEY_PLAIN,1.0,Scalar(255),2);
-		ss.clear(); ss << "flow field " << omp_get_thread_num();
+//		putText(img_matches,ss.str(),Point(10,20),CV_FONT_HERSHEY_PLAIN,1.0,Scalar(255),2);
+		ss.clear(); ss << "flow_field_" << omp_get_thread_num() << ".png";
 		imshow( ss.str(), img_matches );
-		waitKey(500);
+		int c = waitKey(0);
+		if (c=='s') {
+			imwrite(ss.str(), img_matches);
+		}
 		destroyWindow(ss.str());
 	}
 #endif

@@ -35,7 +35,7 @@ void GetAlignedPointsFromMatch(const std::vector<cv::KeyPoint>& imgpts1,
 							   std::vector<cv::KeyPoint>& pt_set1,
 							   std::vector<cv::KeyPoint>& pt_set2);
 
-void drawArrows(cv::Mat& frame, const std::vector<cv::Point2f>& prevPts, const std::vector<cv::Point2f>& nextPts, const std::vector<uchar>& status, const std::vector<float>& verror, cv::Scalar line_color = cv::Scalar(0, 0, 255));
+void drawArrows(cv::Mat& frame, const std::vector<cv::Point2f>& prevPts, const std::vector<cv::Point2f>& nextPts, const std::vector<uchar>& status, const std::vector<float>& verror, const cv::Scalar& line_color = cv::Scalar(0, 0, 255));
 
 #ifdef USE_PROFILING
 #define CV_PROFILE(msg,code)	{\
@@ -49,3 +49,4 @@ void drawArrows(cv::Mat& frame, const std::vector<cv::Point2f>& prevPts, const s
 #endif
 
 void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor);
+void imshow_250x250(const std::string& name_, const cv::Mat& patch);
