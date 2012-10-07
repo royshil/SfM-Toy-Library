@@ -101,7 +101,7 @@ void MultiCameraDistance::OnlyMatchFeatures(int strategy)
 	//		}
 	//	}
 	//} else {
-//#pragma omp parallel for
+#pragma omp parallel for
 		for (frame_num_i = 0; frame_num_i < loop1_top; frame_num_i++) {
 			for (int frame_num_j = frame_num_i + 1; frame_num_j < loop2_top; frame_num_j++)
 			{
@@ -124,9 +124,8 @@ void MultiCameraDistance::GetRGBForPointCloud(
 	std::vector<cv::Vec3b>& RGBforCloud
 	) 
 {
-	RGBforCloud.clear();
+	RGBforCloud.resize(_pcloud.size());
 	for (unsigned int i=0; i<_pcloud.size(); i++) {
-		//pointcloud_beforeBA.push_back(_pcloud[i]);
 		unsigned int good_view = 0;
 		std::vector<cv::Vec3b> point_colors;
 		for(; good_view < imgs_orig.size(); good_view++) {
@@ -141,13 +140,13 @@ void MultiCameraDistance::GetRGBForPointCloud(
 				
 				point_colors.push_back(imgs_orig[good_view].at<cv::Vec3b>(_pt));
 				
-				std::stringstream ss; ss << "patch " << good_view;
+//				std::stringstream ss; ss << "patch " << good_view;
 //				imshow_250x250(ss.str(), imgs_orig[good_view](cv::Range(_pt.y-10,_pt.y+10),cv::Range(_pt.x-10,_pt.x+10)));
 			}
 		}
 //		cv::waitKey(0);
 		cv::Scalar res_color = cv::mean(point_colors);
-		RGBforCloud.push_back(cv::Vec3b(res_color[2],res_color[1],res_color[0])); //bgr2rgb
+		RGBforCloud[i] = (cv::Vec3b(res_color[0],res_color[1],res_color[2])); //bgr2rgb
 		if(good_view == imgs.size()) //nothing found.. put red dot
 			RGBforCloud.push_back(cv::Vec3b(255,0,0));
 	}

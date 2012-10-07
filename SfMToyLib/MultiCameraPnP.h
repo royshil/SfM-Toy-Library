@@ -40,7 +40,9 @@ private:
 		int working_view,
 		cv::Mat_<double>& rvec,
 		cv::Mat_<double>& t,
-		cv::Mat_<double>& R);
+		cv::Mat_<double>& R,
+		std::vector<cv::Point3f> ppcloud,
+		std::vector<cv::Point2f> imgPoints);
 	bool TriangulatePointsBetweenViews(
 		int working_view, 
 		int second_view,

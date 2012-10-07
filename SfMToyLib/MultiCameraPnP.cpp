@@ -50,7 +50,7 @@ void MultiCameraPnP::GetBaseLineTriangulation() {
 	//sort pairwise matches to find the lowest Homography inliers [Snavely07 4.2]
 	cout << "Find highest match...";
 	list<pair<int,pair<int,int> > > matches_sizes;
-	//TODO parallelize!
+	//TODO: parallelize!
 	for(std::map<std::pair<int,int> ,std::vector<cv::DMatch> >::iterator i = matches_matrix.begin(); i != matches_matrix.end(); ++i) {
 		if((*i).second.size() < 100)
 			matches_sizes.push_back(make_pair(100,(*i).first));
@@ -192,14 +192,11 @@ bool MultiCameraPnP::FindPoseEstimation(
 	int working_view,
 	cv::Mat_<double>& rvec,
 	cv::Mat_<double>& t,
-	cv::Mat_<double>& R
+	cv::Mat_<double>& R,
+	std::vector<cv::Point3f> ppcloud,
+	std::vector<cv::Point2f> imgPoints
 	) 
 {
-
-	std::vector<cv::Point3f> ppcloud;
-	std::vector<cv::Point2f> imgPoints;
-	CV_PROFILE("Find2D3DCorrespondences",Find2D3DCorrespondences(working_view,ppcloud,imgPoints);)
-
 	if(ppcloud.size() <= 7 || imgPoints.size() <= 7 || ppcloud.size() != imgPoints.size()) { 
 		//something went wrong aligning 3D to 2D points..
 		cerr << "couldn't find [enough] corresponding cloud points... (only " << ppcloud.size() << ")" <<endl;
@@ -335,8 +332,14 @@ bool MultiCameraPnP::TriangulatePointsBetweenViews(
 			continue;
 		}
 	}
+
 	cout << "filtered out " << (new_triangulated.size() - new_triangulated_filtered.size()) << " high-error points" << endl;
+
+	//all points filtered?
+	if(new_triangulated_filtered.size() <= 0) return false;
+	
 	new_triangulated = new_triangulated_filtered;
+	
 	matches = new_matches;
 	matches_matrix[std::make_pair(older_view,working_view)] = new_matches; //just to make sure, remove if unneccesary
 	matches_matrix[std::make_pair(working_view,older_view)] = FlipMatches(new_matches);
@@ -415,7 +418,7 @@ void MultiCameraPnP::AdjustCurrentBundle() {
 
 void MultiCameraPnP::PruneMatchesBasedOnF() {
 	//prune the match between <_i> and all views using the Fundamental matrix to prune
-//#pragma omp parallel for
+#pragma omp parallel for
 	for (int _i=0; _i < imgs.size() - 1; _i++)
 	{
 		for (unsigned int _j=_i+1; _j < imgs.size(); _j++) {
@@ -468,6 +471,7 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 	{
 		//find image with highest 2d-3d correspondance [Snavely07 4.2]
 		unsigned int max_2d3d_view = -1, max_2d3d_count = 0;
+		vector<cv::Point3f> max_3d; vector<cv::Point2f> max_2d;
 		for (unsigned int _i=0; _i < imgs.size(); _i++) {
 			if(done_views.find(_i) != done_views.end()) continue; //already done with this view
 
@@ -476,6 +480,7 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 			if(tmp3d.size() > max_2d3d_count) {
 				max_2d3d_count = tmp3d.size();
 				max_2d3d_view = _i;
+				max_3d = tmp3d; max_2d = tmp2d;
 			}
 		}
 		int i = max_2d3d_view; //highest 2d3d matching view
@@ -483,7 +488,7 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 		std::cout << "-------------------------- " << imgs_names[i] << " --------------------------\n";
 		done_views.insert(i); // don't repeat it for now
 
-		bool pose_estimated = FindPoseEstimation(i,rvec,t,R);
+		bool pose_estimated = FindPoseEstimation(i,rvec,t,R,max_3d,max_2d);
 		if(!pose_estimated)
 			continue;
 

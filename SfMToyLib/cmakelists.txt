@@ -20,7 +20,6 @@ set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
 file(GLOB SFM_LIB_SOURCES	
 	Distance.* 
 	Triangulation.* 
-	FeatureMatching.*
 	FindCameraMatrices.*
 	MultiCameraDistance.*
 	IDistance.*
