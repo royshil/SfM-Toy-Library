@@ -105,13 +105,14 @@ Mat_<double> IterativeLinearLSTriangulation(Point3d u,	//homogenous image point 
 
 //Triagulate points
 double TriangulatePoints(const vector<KeyPoint>& pt_set1, 
-					   const vector<KeyPoint>& pt_set2, 
-					   const Mat& Kinv,
-					   const Mat& distcoeff,
-					   const Matx34d& P,
-					   const Matx34d& P1,
-					   vector<CloudPoint>& pointcloud,
-					   vector<KeyPoint>& correspImg1Pt)
+						const vector<KeyPoint>& pt_set2, 
+						const Mat& K,
+						const Mat& Kinv,
+						const Mat& distcoeff,
+						const Matx34d& P,
+						const Matx34d& P1,
+						vector<CloudPoint>& pointcloud,
+						vector<KeyPoint>& correspImg1Pt)
 {
 #ifdef __SFM__DEBUG__
 	vector<double> depths;
@@ -125,7 +126,6 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 				P1(2,0),P1(2,1),P1(2,2),P1(2,3),
 				0,		0,		0,		1);
 	Matx44d P1inv(P1_.inv());
-	Mat_<double> K = Kinv.inv();
 	
 	cout << "Triangulating...";
 	double t = getTickCount();
@@ -141,8 +141,8 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 	
 	//undistort
 	Mat pt_set1_pt,pt_set2_pt;
-	undistortPoints(_pt_set1_pt, pt_set1_pt, K, Mat());
-	undistortPoints(_pt_set2_pt, pt_set2_pt, K, Mat());
+	undistortPoints(_pt_set1_pt, pt_set1_pt, K, distcoeff);
+	undistortPoints(_pt_set2_pt, pt_set2_pt, K, distcoeff);
 	
 	//triangulate
 	Mat pt_set1_pt_2r = pt_set1_pt.reshape(1, 2);
@@ -186,7 +186,7 @@ double TriangulatePoints(const vector<KeyPoint>& pt_set1,
 //		cout <<	"P1 * Point: " << x << endl;
 //		Mat_<double> xPt = (Mat_<double>(3,1) << x(0),x(1),x(2));
 //		cout <<	"Point: " << xPt << endl;
-		Mat_<double> xPt_img = KP1 * X;
+		Mat_<double> xPt_img = KP1 * X;				//reproject
 //		cout <<	"Point * K: " << xPt_img << endl;
 		Point2f xPt_img_(xPt_img(0)/xPt_img(2),xPt_img(1)/xPt_img(2));
 				

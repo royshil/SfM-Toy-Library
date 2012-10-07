@@ -108,6 +108,6 @@ public:
 		std::vector<cv::KeyPoint> pt_set1,pt_set2;
 		GetAlignedPointsFromMatch(imgpts1,imgpts2,matches,pt_set1,pt_set2);
 		
-		TriangulatePoints(pt_set1, pt_set2, Kinv,distortion_coeff, P, P1, pointcloud, correspImg1Pt);
+		TriangulatePoints(pt_set1, pt_set2, K, Kinv,distortion_coeff, P, P1, pointcloud, correspImg1Pt);
 	}
 };

@@ -298,7 +298,7 @@ bool MultiCameraPnP::TriangulatePointsBetweenViews(
 
 
 	//adding more triangulated points to general cloud
-	double reproj_error = TriangulatePoints(pt_set1, pt_set2, Kinv, distortion_coeff, P, P1, new_triangulated, correspImg1Pt);
+	double reproj_error = TriangulatePoints(pt_set1, pt_set2, K, Kinv, distortion_coeff, P, P1, new_triangulated, correspImg1Pt);
 	std::cout << "triangulation reproj error " << reproj_error << std::endl;
 
 //	if(reproj_error > 20.0) {
