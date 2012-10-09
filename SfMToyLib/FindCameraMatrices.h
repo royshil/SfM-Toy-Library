@@ -16,6 +16,7 @@
 //#undef __SFM__DEBUG__
 
 bool CheckCoherentRotation(cv::Mat_<double>& R);
+bool TestTriangulation(const std::vector<CloudPoint>& pcloud, const cv::Matx34d& P, std::vector<uchar>& status);
 
 cv::Mat GetFundamentalMat(	const std::vector<cv::KeyPoint>& imgpts1,
 							const std::vector<cv::KeyPoint>& imgpts2,

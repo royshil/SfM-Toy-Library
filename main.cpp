@@ -18,6 +18,27 @@ using namespace std;
 
 #include <opencv2/gpu/gpu.hpp>
 
+class VisualizerListener : public SfMUpdateListener {
+public:
+	void update(std::vector<cv::Point3d> pcld,
+				std::vector<cv::Vec3b> pcldrgb, 
+				std::vector<cv::Point3d> pcld_alternate,
+				std::vector<cv::Vec3b> pcldrgb_alternate, 
+				std::vector<cv::Matx34d> cameras) {
+		ShowClouds(pcld, pcldrgb, pcld_alternate, pcldrgb_alternate);
+		
+		vector<cv::Matx34d> v = cameras;
+		for(unsigned int i=0;i<v.size();i++) {
+			stringstream ss; ss << "camera" << i;
+			cv::Matx33f R; 
+			R(0,0)=v[i](0,0); R(0,1)=v[i](0,1); R(0,2)=v[i](0,2);
+			R(1,0)=v[i](1,0); R(1,1)=v[i](1,1); R(1,2)=v[i](1,2);
+			R(2,0)=v[i](2,0); R(2,1)=v[i](2,1); R(2,2)=v[i](2,2);
+			visualizerShowCamera(R,cv::Vec3f(v[i](0,3),v[i](1,3),v[i](2,3)),255,0,0,0.2,ss.str());
+		}
+	}
+};
+
 std::vector<cv::Mat> images;
 std::vector<std::string> images_names;
 
@@ -69,10 +90,11 @@ int main(int argc, char** argv) {
 	else
 		distance->use_gpu = (strcmp(argv[3], "GPU") == 0);
 	
+	cv::Ptr<VisualizerListener> visualizerListener = new VisualizerListener; //with ref-count
+	distance->attach(visualizerListener);
+	RunVisualizationThread();
 
 	distance->RecoverDepthFromImages();
-
-		RunVisualizationThread();
 
 	//get the scale of the result cloud using PCA
 	double scale_cameras_down = 1.0;
@@ -92,15 +114,13 @@ int main(int argc, char** argv) {
 		//	scale_cameras_down = 1.0/scale_cameras_down;
 		//}
 	}
-
-	vector<cv::Matx34d> v = distance->getCameras();
-	for(unsigned int i=0;i<v.size();i++) {
-		cv::Matx33f R; 
-		R(0,0)=v[i](0,0); R(0,1)=v[i](0,1); R(0,2)=v[i](0,2);
-		R(1,0)=v[i](1,0); R(1,1)=v[i](1,1); R(1,2)=v[i](1,2);
-		R(2,0)=v[i](2,0); R(2,1)=v[i](2,1); R(2,2)=v[i](2,2);
-		visualizerShowCamera(R,cv::Vec3f(v[i](0,3),v[i](1,3),v[i](2,3)),255,0,0,scale_cameras_down);
-	}
+	
+	visualizerListener->update(distance->getPointCloud(),
+							   distance->getPointCloudRGB(),
+							   distance->getPointCloudBeforeBA(),
+							   distance->getPointCloudRGBBeforeBA(),
+							   distance->getCameras());
+							   
 
 	//ShowCloud(distance->getPointCloud(), 
 	//		   distance->getPointCloudRGB(),
@@ -108,11 +128,11 @@ int main(int argc, char** argv) {
 	//WaitForVisualizationThread();
 	//return 1;
 	
-	ShowClouds(distance->getPointCloud(), 
-			   distance->getPointCloudRGB(),
-			   distance->getPointCloudBeforeBA(),
-			   distance->getPointCloudRGBBeforeBA()
-			   );
+//	ShowClouds(distance->getPointCloud(), 
+//			   distance->getPointCloudRGB(),
+//			   distance->getPointCloudBeforeBA(),
+//			   distance->getPointCloudRGBBeforeBA()
+//			   );
 	WaitForVisualizationThread();
 }
 #endif

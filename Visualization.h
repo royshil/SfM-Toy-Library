@@ -29,4 +29,4 @@ void ShowCloud(const std::vector<cv::Point3d>& pointcloud,
 				const std::string& name);
 
 void visualizerShowCamera(const float R[9], const float t[3], float r, float g, float b);
-void visualizerShowCamera(const cv::Matx33f& R, const cv::Vec3f& t, float r, float g, float b, double s);
+void visualizerShowCamera(const cv::Matx33f& R, const cv::Vec3f& t, float r, float g, float b, double s, const std::string& name = "");

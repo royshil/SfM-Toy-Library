@@ -186,7 +186,8 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 	
 	Matrix3x3d K0 = cams[0].getIntrinsic();
 	cout << "K0 = "; displayMatrix(K0);
-	
+
+	bool good_adjustment = false;
 	{
 		ScopedBundleExtrinsicNormalizer extNorm(cams, Xs);
 		ScopedBundleIntrinsicNormalizer intNorm(cams,measurements,correspondingView);
@@ -199,6 +200,8 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 		opt.minimize();
 		
 		cout << "optimizer status = " << opt.status << endl;
+		
+		good_adjustment = (opt.status != 2);
 	}
 	
 	cout << "refined K = "; displayMatrix(K0);
@@ -212,7 +215,7 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 	
 	showErrorStatistics(f0, distortion, cams, Xs, measurements, correspondingView, correspondingPoint);
 	
-	{
+	if(good_adjustment) { //good adjustment?
 		
 		//Vector3d mean(0.0, 0.0, 0.0);
 		//for (unsigned int j = 0; j < Xs.size(); ++j) addVectorsIP(Xs[j], mean);
@@ -252,10 +255,10 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 		
 
 		//TODO: extract camera intrinsics
-//		cam_matrix.at<double>(0,0) = Knew[0][0];
-//		cam_matrix.at<double>(0,1) = Knew[0][1];
-//		cam_matrix.at<double>(0,2) = Knew[0][2];
-//		cam_matrix.at<double>(1,1) = Knew[1][1];
-//		cam_matrix.at<double>(1,2) = Knew[1][2];
+		cam_matrix.at<double>(0,0) = Knew[0][0];
+		cam_matrix.at<double>(0,1) = Knew[0][1];
+		cam_matrix.at<double>(0,2) = Knew[0][2];
+		cam_matrix.at<double>(1,1) = Knew[1][1];
+		cam_matrix.at<double>(1,2) = Knew[1][2];
 	}
 }

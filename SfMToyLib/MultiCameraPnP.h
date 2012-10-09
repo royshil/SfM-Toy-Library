@@ -10,6 +10,7 @@
 
 #include "MultiCameraDistance.h"
 #include "Common.h"
+#include "SfMUpdateListener.h"
 
 class MultiCameraPnP : public MultiCameraDistance {
 	std::vector<CloudPoint> pointcloud_beforeBA;
@@ -55,4 +56,22 @@ private:
 	int m_second_view; //baseline's second view other to 0
 	std::set<int> done_views;
 	std::set<int> good_views;
+	
+/********** Subject / Objserver **********/
+	std::vector < SfMUpdateListener * > listeners;
+public:
+    void attach(SfMUpdateListener *sul)
+    {
+        listeners.push_back(sul);
+    }
+private:
+    void update()
+    {
+        for (int i = 0; i < listeners.size(); i++)
+			listeners[i]->update(getPointCloud(),
+								 getPointCloudRGB(),
+								 getPointCloudBeforeBA(),
+								 getPointCloudRGBBeforeBA(),
+								 getCameras());
+    }
 };
