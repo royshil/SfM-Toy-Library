@@ -232,7 +232,7 @@ bool MultiCameraPnP::FindPoseEstimation(
 		}
 	}
 
-#if 1
+#if 0
 	//display reprojected points and matches
 	cv::Mat reprojected; imgs_orig[working_view].copyTo(reprojected);
 	for(int ppt=0;ppt<imgPoints.size();ppt++) {
@@ -533,7 +533,6 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 		
 		AdjustCurrentBundle();
 		update();
-		
 	}
 
 	cout << "======================================================================\n";
