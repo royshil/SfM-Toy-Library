@@ -8,6 +8,8 @@
 
 #include "GPUSURFFeatureMatcher.h"
 
+#ifdef HAVE_OPENCV_GPU
+
 #include "FindCameraMatrices.h"
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -103,3 +105,5 @@ void GPUSURFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* 
 		}
 	}
 }
+
+#endif

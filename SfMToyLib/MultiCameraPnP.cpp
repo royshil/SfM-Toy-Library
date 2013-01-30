@@ -13,7 +13,9 @@
 
 using namespace std;
 
+#ifdef HAVE_OPENCV_GPU
 #include <opencv2/gpu/gpu.hpp>
+#endif
 #include <opencv2/calib3d/calib3d.hpp>
 
 bool sort_by_first(pair<int,pair<int,int> > a, pair<int,pair<int,int> > b) { return a.first < b.first; }
@@ -210,6 +212,7 @@ bool MultiCameraPnP::FindPoseEstimation(
 		CV_PROFILE("solvePnPRansac",cv::solvePnPRansac(ppcloud, imgPoints, K, distortion_coeff, rvec, t, true, 1000, 0.006 * maxVal, 0.25 * (double)(imgPoints.size()), inliers, CV_EPNP);)
 		//CV_PROFILE("solvePnP",cv::solvePnP(ppcloud, imgPoints, K, distortion_coeff, rvec, t, true, CV_EPNP);)
 	} else {
+#ifdef HAVE_OPENCV_GPU
 		//use GPU ransac
 		//make sure datatstructures are cv::gpu compatible
 		cv::Mat ppcloud_m(ppcloud); ppcloud_m = ppcloud_m.t();
@@ -220,6 +223,7 @@ bool MultiCameraPnP::FindPoseEstimation(
 
 		rvec_.convertTo(rvec,CV_64FC1);
 		t_.convertTo(t,CV_64FC1);
+#endif
 	}
 
 	vector<cv::Point2f> projected3D;

@@ -16,7 +16,9 @@
 
 using namespace std;
 
+#ifdef HAVE_OPENCV_GPU
 #include <opencv2/gpu/gpu.hpp>
+#endif
 
 class VisualizerListener : public SfMUpdateListener {
 public:
@@ -85,10 +87,14 @@ int main(int argc, char** argv) {
 	else
 		distance->use_rich_features = (strcmp(argv[2], "RICH") == 0);
 	
+#ifdef HAVE_OPENCV_GPU
 	if(argc < 4)
 		distance->use_gpu = (cv::gpu::getCudaEnabledDeviceCount() > 0);
 	else
 		distance->use_gpu = (strcmp(argv[3], "GPU") == 0);
+#else
+	distance->use_gpu = false;
+#endif
 	
 	cv::Ptr<VisualizerListener> visualizerListener = new VisualizerListener; //with ref-count
 	distance->attach(visualizerListener);

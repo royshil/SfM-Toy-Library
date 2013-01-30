@@ -10,7 +10,9 @@
 #include "OFFeatureMatcher.h"
 #include <opencv2/video/video.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#ifdef HAVE_OPENCV_GPU
 #include <opencv2/gpu/gpu.hpp>
+#endif
 #include <opencv2/flann/flann.hpp>
 
 #ifdef __SFM__DEBUG__
@@ -55,6 +57,7 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 
 	vector<uchar> vstatus(i_pts.size()); vector<float> verror(i_pts.size());
 
+#ifdef HAVE_OPENCV_GPU
 	if(use_gpu) {
 		gpu::GpuMat gpu_prevImg,gpu_nextImg,gpu_prevPts,gpu_nextPts,gpu_status,gpu_error;
 		gpu_prevImg.upload(prevgray);
@@ -73,7 +76,9 @@ void OFFeatureMatcher::MatchFeatures(int idx_i, int idx_j, vector<DMatch>* match
 		gpu_error.download(verror_mat);
 		Mat(vstatus_mat.t()).copyTo(Mat(vstatus));
 		Mat(verror_mat.t()).copyTo(Mat(verror));
-	} else {
+	} else 
+#endif
+	{
 		CV_PROFILE("OpticalFlow",calcOpticalFlowPyrLK(prevgray, gray, i_pts, j_pts, vstatus, verror);)
 	}
 
