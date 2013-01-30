@@ -54,7 +54,7 @@ int runUI(int argc, char** argv);
 int main(int argc, char** argv) { //test with real photos
 	runUI(argc, argv);
 
-	destroyAllWindows();
+	cv::destroyAllWindows();
 	
 //	RunVisualization(pointcloud, img_1_orig, img_2_orig, correspImg1Pt);
 	
