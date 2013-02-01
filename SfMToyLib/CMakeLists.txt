@@ -1,10 +1,12 @@
+cmake_minimum_required(VERSION 2.6)
+
 if(EIGEN_INCLUDE_DIRS) # if compiling with PCL, it will bring Eigen with it
 	message(STATUS "SfMToyLib will use Eigen")
 	include_directories(${EIGEN_INCLUDE_DIRS})
 	add_definitions( -DUSE_EIGEN )
 endif()
 
-set(SSBA_LIBRARY_DIR "${CMAKE_SOURCE_DIR}/3rdparty/SSBA-3.0/build" CACHE PATH "Directory to find SSBA libs")
+set(SSBA_LIBRARY_DIR "${CMAKE_SOURCE_DIR}/../3rdparty/SSBA-3.0/build" CACHE PATH "Directory to find SSBA libs")
 
 link_directories(
 	${SSBA_LIBRARY_DIR}
