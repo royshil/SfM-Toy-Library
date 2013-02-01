@@ -22,8 +22,10 @@ cv::Mat GetFundamentalMat(	const std::vector<cv::KeyPoint>& imgpts1,
 							const std::vector<cv::KeyPoint>& imgpts2,
 							std::vector<cv::KeyPoint>& imgpts1_good,
 							std::vector<cv::KeyPoint>& imgpts2_good,
-							std::vector<cv::DMatch>& matches,
-							const cv::Mat& = cv::Mat(), const cv::Mat& = cv::Mat()
+							std::vector<cv::DMatch>& matches
+#ifdef __SFM__DEBUG__
+					  		,const Mat& img_1, const Mat& img_2
+#endif
 						  );
 
 bool FindCameraMatrices(const cv::Mat& K, 
