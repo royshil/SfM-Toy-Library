@@ -365,9 +365,9 @@ bool FindCameraMatrices(const Mat& K,
 		double t = getTickCount();
 		
 		Mat F = GetFundamentalMat(imgpts1,imgpts2,imgpts1_good,imgpts2_good,matches
-//#ifdef __SFM__DEBUG__
-//								  ,img_1,img_2
-//#endif
+#ifdef __SFM__DEBUG__
+								  ,img_1,img_2
+#endif
 								  );
 		if(matches.size() < 100) { // || ((double)imgpts1_good.size() / (double)imgpts1.size()) < 0.25
 			cerr << "not enough inliers after F matrix" << endl;

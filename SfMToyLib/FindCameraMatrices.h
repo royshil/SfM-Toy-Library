@@ -24,7 +24,7 @@ cv::Mat GetFundamentalMat(	const std::vector<cv::KeyPoint>& imgpts1,
 							std::vector<cv::KeyPoint>& imgpts2_good,
 							std::vector<cv::DMatch>& matches
 #ifdef __SFM__DEBUG__
-					  		,const Mat& img_1, const Mat& img_2
+						  ,const cv::Mat& img_1, const cv::Mat& img_2
 #endif
 						  );
 

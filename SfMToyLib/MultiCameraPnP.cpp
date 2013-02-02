@@ -109,10 +109,12 @@ void MultiCameraPnP::GetBaseLineTriangulation() {
 				Pmats[m_second_view] = 0;
 				m_second_view++;
 			} else {
+				assert(new_triangulated[0].imgpt_for_img.size() > 0);
 				std::cout << "before triangulation: " << pcloud.size();
 				for (unsigned int j=0; j<add_to_cloud.size(); j++) {
-					if(add_to_cloud[j] == 1)
+					if(add_to_cloud[j] == 1) {
 						pcloud.push_back(new_triangulated[j]);
+					}
 				}
 				std::cout << " after " << pcloud.size() << std::endl;
 			}				
@@ -346,14 +348,21 @@ bool MultiCameraPnP::TriangulatePointsBetweenViews(
 
 	cout << "filtered out " << (new_triangulated.size() - new_triangulated_filtered.size()) << " high-error points" << endl;
 
-	//all points filtered?
+	//all points filtered out?
 	if(new_triangulated_filtered.size() <= 0) return false;
 	
-	new_triangulated = new_triangulated_filtered;
-	
+	//use filtered points now
+	new_triangulated.clear();
+	new_triangulated.insert(new_triangulated.begin(), new_triangulated_filtered.begin(), new_triangulated_filtered.end());	
+	//use filtered matches
 	matches = new_matches;
+	
+	//update the matches storage
 	matches_matrix[std::make_pair(older_view,working_view)] = new_matches; //just to make sure, remove if unneccesary
 	matches_matrix[std::make_pair(working_view,older_view)] = FlipMatches(new_matches);
+	
+	//now, determine which points should be added to the cloud
+	
 	add_to_cloud.clear();
 	add_to_cloud.resize(new_triangulated.size(),1);
 	int found_other_views_count = 0;
@@ -362,13 +371,14 @@ bool MultiCameraPnP::TriangulatePointsBetweenViews(
 	//scan new triangulated points, if they were already triangulated before - strengthen cloud
 	//#pragma omp parallel for num_threads(1)
 	for (int j = 0; j<new_triangulated.size(); j++) {
-		new_triangulated[j].imgpt_for_img = std::vector<int>(imgs.size(),-1);
+		new_triangulated[j].imgpt_for_img.resize(imgs.size(),-1);
 
 		//matches[j] corresponds to new_triangulated[j]
 		//matches[j].queryIdx = point in <older_view>
 		//matches[j].trainIdx = point in <working_view>
 		new_triangulated[j].imgpt_for_img[older_view] = matches[j].queryIdx;	//2D reference to <older_view>
 		new_triangulated[j].imgpt_for_img[working_view] = matches[j].trainIdx;		//2D reference to <working_view>
+		
 		bool found_in_other_view = false;
 		for (unsigned int view_ = 0; view_ < num_views; view_++) {
 			if(view_ != older_view) {

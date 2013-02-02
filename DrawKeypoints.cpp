@@ -68,7 +68,11 @@ int main( int argc, char** argv )
 //				kpts2.push_back(KeyPoint(pts2[i],1));
 //			}
 //		}
-		GetFundamentalMat(keypoints_1, keypoints_2, kpts1, kpts2, Fmatches);
+		GetFundamentalMat(keypoints_1, keypoints_2, kpts1, kpts2, Fmatches
+#ifdef __SFM__DEBUG__
+						  , img_1, img_2
+#endif
+						  );
 		
 		drawMatches(img_1, keypoints_1, img_2, keypoints_2, Fmatches, img_keypoints, Scalar::all(-1), Scalar::all(-1), Mat(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 	}

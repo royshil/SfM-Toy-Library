@@ -46,6 +46,8 @@ link_directories(
 	
 add_definitions(${PCL_DEFINITIONS})
 
+set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
+
 include_directories(
 	${FLTK_INCLUDE_DIR} 
 	${PCL_INCLUDE_DIRS} 
