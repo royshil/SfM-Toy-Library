@@ -286,7 +286,7 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 	vector<Mat> cameraMatrix(N);	// intrinsic matrices of all cameras (input and output)
 	vector<Mat> R(N);				// rotation matrices of all cameras (input and output)
 	vector<Mat> T(N);				// translation vector of all cameras (input and output)
-	vector<Mat> distCoeffs(N);		// distortion coefficients of all cameras (input and output)
+	vector<Mat> distCoeffs(0);		// distortion coefficients of all cameras (input and output)
 	
 	int num_global_cams = pointcloud[0].imgpt_for_img.size();
 	vector<int> global_cam_id_to_local_id(num_global_cams,-1);
@@ -326,7 +326,14 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 					int local_id = local_it - local_cam_id_to_global_id.begin();
 					
 					if (local_id >= 0) {
-						imagePoints[local_id][pt3d] = Point2d(-1,-1); //TODO reproject point on this camera
+						//reproject
+						Mat_<double> X = (Mat_<double>(4,1) << pointcloud[pt3d].pt.x, pointcloud[pt3d].pt.y, pointcloud[pt3d].pt.z, 1);
+						Mat_<double> P(3,4,Pmats[pt3d_img].val);
+						Mat_<double> KP = cam_matrix * P;
+						Mat_<double> xPt_img = KP * X;				
+						Point2d xPt_img_(xPt_img(0)/xPt_img(2),xPt_img(1)/xPt_img(2));
+						
+						imagePoints[local_id][pt3d] = xPt_img_; //TODO reproject point on this camera
 						visibility[local_id][pt3d] = 0;
 					}				
 				}
@@ -345,7 +352,7 @@ void BundleAdjuster::adjustBundle(vector<CloudPoint>& pointcloud,
 		R[i] = camR;
 		T[i] = camT;
 		
-		distCoeffs[i] = Mat::zeros(4,1, CV_64FC1);
+//		distCoeffs[i] = Mat(); //::zeros(4,1, CV_64FC1);
 	}
 	
 	cout << "Adjust bundle... \n";
