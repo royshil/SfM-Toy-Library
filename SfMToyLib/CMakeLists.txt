@@ -6,7 +6,7 @@ if(EIGEN_INCLUDE_DIRS) # if compiling with PCL, it will bring Eigen with it
 	add_definitions( -DUSE_EIGEN )
 endif()
 
-set(SSBA_LIBRARY_DIR "${CMAKE_SOURCE_DIR}/../3rdparty/SSBA-3.0/build" CACHE PATH "Directory to find SSBA libs")
+set(SSBA_LIBRARY_DIR "${CMAKE_SOURCE_DIR}/3rdparty/SSBA-3.0/build" CACHE PATH "Directory to find SSBA libs")
 set(USE_SSBA ON CACHE BOOL "Build using the SSBA-3.0 library?")
 
 if(USE_SSBA)
@@ -42,19 +42,18 @@ file(GLOB SFM_LIB_SOURCES
 )
 
 add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )
-
 if(MSVC)
 	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "/openmp")
 	if(USE_SSBA)
 		target_link_libraries(SfMToyLibrary V3D COLAMD )
 	endif(USE_SSBA)
 endif()
-if(APPLE)
+if(UNIX)
 	if(USE_SSBA)
 		# default is to build SSBA as static libs...
 		target_link_libraries(SfMToyLibrary 
 			"${SSBA_LIBRARY_DIR}/libV3D.a" 
-			"${SSBA_LIBRARY_DIR}/libCOLAMD.a"
+			"${SSBA_LIBRARY_DIR}/libcolamd.a"
 			)
 	endif(USE_SSBA)
 	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "-fopenmp")
