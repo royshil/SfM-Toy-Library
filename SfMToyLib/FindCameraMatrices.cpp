@@ -35,7 +35,7 @@ void DecomposeEssentialUsingHorn90(double _E[9], double _R1[9], double _R2[9], d
 
 	Matrix3d E = Map<Matrix<double,3,3,RowMajor> >(_E);
 	Matrix3d EEt = E * E.transpose();
-	Vector3d e0e1 = E.col(0).cross(E.col(1)),e1e2 = E.col(1).cross(E.col(2)),e2e0 = E.col(2).cross(E.col(2));
+	Vector3d e0e1 = E.col(0).cross(E.col(1)),e1e2 = E.col(1).cross(E.col(2)),e2e0 = E.col(2).cross(E.col(0));
 	Vector3d b1,b2;
 
 #if 1
