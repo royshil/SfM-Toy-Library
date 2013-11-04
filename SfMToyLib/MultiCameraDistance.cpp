@@ -16,6 +16,15 @@ void MultiCameraDistance::setImages(const std::vector<cv::Mat>& imgs_,
 		const std::vector<std::string>& imgs_names_,
 		const std::string& imgs_path_)
 {
+	imgpts.clear();
+	fullpts.clear();
+	imgpts_good.clear();
+	matches_matrix.clear();
+	imgs_orig.clear();
+	imgs.clear();
+	imgs_names.clear();
+	Pmats.clear();
+
 	std::cout << "=========================== Load Images ===========================\n";
 	imgs_names = imgs_names_;
 	//ensure images are CV_8UC3

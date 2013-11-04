@@ -488,6 +488,8 @@ void MultiCameraPnP::RecoverDepthFromImages() {
 												   P1(2,0), P1(2,1), P1(2,2));
 	cv::Mat_<double> rvec(1,3); Rodrigues(R, rvec);
 	
+	done_views.clear(); good_views.clear();
+
 	done_views.insert(m_first_view);
 	done_views.insert(m_second_view);
 	good_views.insert(m_first_view);

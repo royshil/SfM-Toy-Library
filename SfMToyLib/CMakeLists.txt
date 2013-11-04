@@ -10,13 +10,8 @@ set(SSBA_LIBRARY_DIR "${CMAKE_SOURCE_DIR}/3rdparty/SSBA-3.0/build" CACHE PATH "D
 set(USE_SSBA OFF CACHE BOOL "Build using the SSBA-3.0 library?")
 
 if(USE_SSBA)
-	link_directories(
-		${SSBA_LIBRARY_DIR}
-		)
-
-	include_directories(
-		${SSBA_LIBRARY_DIR}/../
-		)
+	link_directories(${SSBA_LIBRARY_DIR})
+	include_directories("${SSBA_LIBRARY_DIR}/../")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_SSBA")
 endif(USE_SSBA)
 

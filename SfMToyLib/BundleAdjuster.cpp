@@ -20,9 +20,9 @@ using namespace std;
 #ifdef HAVE_SSBA
 #define V3DLIB_ENABLE_SUITESPARSE
 
-#include <Math/v3d_linear.h>
-#include <Base/v3d_vrmlio.h>
-#include <Geometry/v3d_metricbundle.h>
+#include "../3rdparty/SSBA-3.0/Math/v3d_linear.h"
+#include "../3rdparty/SSBA-3.0/Base/v3d_vrmlio.h"
+#include "../3rdparty/SSBA-3.0/Geometry/v3d_metricbundle.h"
 
 using namespace V3D;
 
