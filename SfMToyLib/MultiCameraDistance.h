@@ -50,6 +50,8 @@ public:
 	bool use_rich_features;
 	bool use_gpu;
 
+	bool bInitialized;
+
 	std::vector<cv::Point3d> getPointCloud() { return CloudPointsToPoints(pcloud); }
 	const cv::Mat& get_im_orig(int frame_num) { return imgs_orig[frame_num]; }
 	const std::vector<cv::KeyPoint>& getcorrespImg1Pt() { return correspImg1Pt; }
@@ -67,10 +69,21 @@ public:
 		std::vector<cv::Vec3b>& RGBforCloud
 		);
 
+	void setImages(const std::vector<cv::Mat>& imgs_,
+			const std::vector<std::string>& imgs_names_,
+			const std::string& imgs_path_);
+	void init(const std::string& imgs_path_);
+
+	MultiCameraDistance():features_matched(false),use_rich_features(true),use_gpu(false) { }
 	MultiCameraDistance(
 		const std::vector<cv::Mat>& imgs_, 
 		const std::vector<std::string>& imgs_names_, 
-		const std::string& imgs_path_);	
-	virtual void OnlyMatchFeatures(int strategy = STRATEGY_USE_FEATURE_MATCH);	
+		const std::string& imgs_path_):
+	imgs_names(imgs_names_),features_matched(false),use_rich_features(true),use_gpu(false)
+	{
+		setImages(imgs_,imgs_names_,imgs_path_);
+	}
+
+	virtual void OnlyMatchFeatures();
 //	bool CheckCoherentRotation(cv::Mat_<double>& R);
 };

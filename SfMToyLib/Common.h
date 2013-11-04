@@ -48,5 +48,5 @@ void drawArrows(cv::Mat& frame, const std::vector<cv::Point2f>& prevPts, const s
 #define CV_PROFILE(msg,code) code
 #endif
 
-void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor);
+void open_imgs_dir(const char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor);
 void imshow_250x250(const std::string& name_, const cv::Mat& patch);

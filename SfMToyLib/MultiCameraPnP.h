@@ -17,6 +17,7 @@ class MultiCameraPnP : public MultiCameraDistance {
 	std::vector<cv::Vec3b> pointCloudRGB_beforeBA;
 
 public:
+	MultiCameraPnP() {}
 	MultiCameraPnP(
 		const std::vector<cv::Mat>& imgs_, 
 		const std::vector<std::string>& imgs_names_, 

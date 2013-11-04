@@ -127,7 +127,7 @@ void imshow_250x250(const string& name_, const Mat& patch) {
 	imshow(name_,bigpatch);
 }
 
-void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor) {
+void open_imgs_dir(const char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor) {
 	if (dir_name == NULL) {
 		return;
 	}
@@ -144,7 +144,7 @@ void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std
 	
 	if (dp != NULL)
 	{
-		while (ep = readdir (dp)) {
+		while ((ep = readdir (dp))) {
 			if (ep->d_name[0] != '.')
 				files_.push_back(ep->d_name);
 		}

@@ -12,7 +12,13 @@
 
 #include "Distance.h"
 #include "MultiCameraPnP.h"
-#include "Visualization.h"
+
+#ifdef HAVE_GUI
+#include <QApplication>
+#include <QGLFormat>
+
+#include "ViewerInterface.h"
+#endif
 
 using namespace std;
 
@@ -20,48 +26,37 @@ using namespace std;
 #include <opencv2/gpu/gpu.hpp>
 #endif
 
-class VisualizerListener : public SfMUpdateListener {
-public:
-	void update(std::vector<cv::Point3d> pcld,
-				std::vector<cv::Vec3b> pcldrgb, 
-				std::vector<cv::Point3d> pcld_alternate,
-				std::vector<cv::Vec3b> pcldrgb_alternate, 
-				std::vector<cv::Matx34d> cameras) {
-		ShowClouds(pcld, pcldrgb, pcld_alternate, pcldrgb_alternate);
-		
-		vector<cv::Matx34d> v = cameras;
-		for(unsigned int i=0;i<v.size();i++) {
-			stringstream ss; ss << "camera" << i;
-			cv::Matx33f R; 
-			R(0,0)=v[i](0,0); R(0,1)=v[i](0,1); R(0,2)=v[i](0,2);
-			R(1,0)=v[i](1,0); R(1,1)=v[i](1,1); R(1,2)=v[i](1,2);
-			R(2,0)=v[i](2,0); R(2,1)=v[i](2,1); R(2,2)=v[i](2,2);
-			visualizerShowCamera(R,cv::Vec3f(v[i](0,3),v[i](1,3),v[i](2,3)),255,0,0,0.2,ss.str());
-		}
-	}
-};
+#ifdef HAVE_GUI
+//------------------------------ Using Qt GUI ------------------------------
+int main(int argc, char** argv) { //test with real photos
+	// Read command lines arguments.
+	QApplication application(argc,argv);
 
+	QGLFormat glFormat;
+	glFormat.setVersion( 3, 2 );
+	glFormat.setProfile( QGLFormat::CoreProfile ); // Requires >=Qt-4.8.0
+	//    glFormat.setSampleBuffers( true );
+	QGLFormat::setDefaultFormat(glFormat);
+
+	// Instantiate the viewer.
+	ViewerInterface viewer;
+
+	viewer.setWindowTitle("SfM-Toy-Library UI");
+	
+	// Make the viewer window visible on screen.
+	viewer.show();
+
+	// Run main loop.
+	return application.exec();
+}
+
+#else
 std::vector<cv::Mat> images;
 std::vector<std::string> images_names;
 
 
 void open_imgs_dir(char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names);
 
-#ifndef NO_FLTK
-//------------------------------ Using FLTK GUI ------------------------------
-int runUI(int argc, char** argv);
-
-int main(int argc, char** argv) { //test with real photos
-	runUI(argc, argv);
-
-	cv::destroyAllWindows();
-	
-//	RunVisualization(pointcloud, img_1_orig, img_2_orig, correspImg1Pt);
-	
-    return 0;
-}
-
-#else
 //---------------------------- Using command-line ----------------------------
 
 int main(int argc, char** argv) {
@@ -102,43 +97,6 @@ int main(int argc, char** argv) {
 
 	distance->RecoverDepthFromImages();
 
-	//get the scale of the result cloud using PCA
-	double scale_cameras_down = 1.0;
-	{
-		vector<cv::Point3d> cld = distance->getPointCloud();
-		if (cld.size()==0) cld = distance->getPointCloudBeforeBA();
-		cv::Mat_<double> cldm(cld.size(),3);
-		for(unsigned int i=0;i<cld.size();i++) {
-			cldm.row(i)(0) = cld[i].x;
-			cldm.row(i)(1) = cld[i].y;
-			cldm.row(i)(2) = cld[i].z;
-		}
-		cv::Mat_<double> mean;
-		cv::PCA pca(cldm,mean,CV_PCA_DATA_AS_ROW);
-		scale_cameras_down = pca.eigenvalues.at<double>(0) / 5.0;
-		//if (scale_cameras_down > 1.0) {
-		//	scale_cameras_down = 1.0/scale_cameras_down;
-		//}
-	}
-	
-	visualizerListener->update(distance->getPointCloud(),
-							   distance->getPointCloudRGB(),
-							   distance->getPointCloudBeforeBA(),
-							   distance->getPointCloudRGBBeforeBA(),
-							   distance->getCameras());
-							   
-
-	//ShowCloud(distance->getPointCloud(), 
-	//		   distance->getPointCloudRGB(),
-	//		   "baseline_only");
-	//WaitForVisualizationThread();
-	//return 1;
-	
-//	ShowClouds(distance->getPointCloud(), 
-//			   distance->getPointCloudRGB(),
-//			   distance->getPointCloudBeforeBA(),
-//			   distance->getPointCloudRGBBeforeBA()
-//			   );
-	WaitForVisualizationThread();
+	//TODO: save point cloud and cameras to file
 }
 #endif

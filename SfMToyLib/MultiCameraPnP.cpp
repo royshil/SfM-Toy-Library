@@ -465,6 +465,10 @@ void MultiCameraPnP::PruneMatchesBasedOnF() {
 }
 
 void MultiCameraPnP::RecoverDepthFromImages() {
+	if(!bInitialized) {
+		std::cerr << "Not initialized with images\n";
+		return;
+	}
 	if(!features_matched) 
 		OnlyMatchFeatures();
 	

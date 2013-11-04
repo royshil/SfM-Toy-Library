@@ -7,7 +7,7 @@ if(EIGEN_INCLUDE_DIRS) # if compiling with PCL, it will bring Eigen with it
 endif()
 
 set(SSBA_LIBRARY_DIR "${CMAKE_SOURCE_DIR}/3rdparty/SSBA-3.0/build" CACHE PATH "Directory to find SSBA libs")
-set(USE_SSBA ON CACHE BOOL "Build using the SSBA-3.0 library?")
+set(USE_SSBA OFF CACHE BOOL "Build using the SSBA-3.0 library?")
 
 if(USE_SSBA)
 	link_directories(
@@ -56,6 +56,4 @@ if(UNIX)
 			"${SSBA_LIBRARY_DIR}/libcolamd.a"
 			)
 	endif(USE_SSBA)
-	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "-fopenmp")
-	set_target_properties(SfMToyLibrary PROPERTIES LINK_FLAGS "-fopenmp")
 endif()
