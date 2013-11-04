@@ -13,7 +13,7 @@ Prerequisite
 ### How to make
 
 - Optionally build SSBA-3.0, by compiling it from '3rdparty' directory, or use "-DUSE_SSBA=OFF" with cmake.
-- If SSBA will not be used, the internal OpenCV bundle adjuster will be used, which is also good.
+- If SSBA will not be used, the internal OpenCV bundle adjuster will be used, but I’ve had better luck with SSBA (I may be using the OpenCV bundle adjuster wrong, though).
 
 On MacOS
 
