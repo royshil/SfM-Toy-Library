@@ -7,8 +7,6 @@ find_package(OpenGL)
 
 add_subdirectory(SfMToyLib)
 
-#find_package(PCL 1.5)
-
 ############### Find Eigen ###############
 set(EIGEN_DIR_HINT "" CACHE PATH "Eigen3 directory")
 find_path(EIGEN_INCLUDE "Eigen/Eigen" PATHS ${EIGEN_DIR_HINT})
@@ -18,13 +16,15 @@ ENDIF(NOT EIGEN_INCLUDE)
 include_directories(${EIGEN_INCLUDE})
 ###########################################
 
-
 SET(USE_GUI TRUE CACHE BOOL "Build with GUI or just CLI")
+
+SET(USE_QT TRUE CACHE BOOL "Use QT for GUI")
+
 IF(USE_GUI)
+	SET(USE_QT TRUE) #Force Qt if using GUI
 	ADD_DEFINITIONS("-DHAVE_GUI")
 ENDIF(USE_GUI)
 
-SET(USE_QT TRUE CACHE BOOL "Use QT for GUI")
 IF(USE_QT)
 	########## Qt stuff ##########
 	find_package(Qt4 REQUIRED QtGui QtOpenGL QtXml)
@@ -57,7 +57,6 @@ IF(USE_QT)
 	############################################
 ENDIF(USE_QT)
 
-
 IF(APPLE)
 #	set( COCOA_LIBS ${CMAKE_OSX_SYSROOT}/System/Library/Frameworks/Cocoa.framework )
 	set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -F/usr/local/lib -L/opt/local/lib")
@@ -66,15 +65,6 @@ IF(APPLE)
 	FIND_LIBRARY(GLUT_LIBRARY GLUT )
 	SET(OpenGL_LIBS ${COCOA_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY})
 ENDIF(APPLE)
-
-#if(PCL_FOUND)
-#	link_directories(${PCL_LIBRARY_DIRS})
-#	
-#	add_definitions(${PCL_DEFINITIONS})
-#
-#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_PCL")
-#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_PCL")
-#endif()
 
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
 
@@ -85,8 +75,6 @@ if(OPENMP_FOUND)
 endif()
 
 include_directories(
-#	${FLTK_INCLUDE_DIR} 
-#	${PCL_INCLUDE_DIRS} 
 	SfMToyLib
 	3rdparty/SSBA-3.0
 	)
@@ -95,7 +83,6 @@ include_directories(
 add_executable(SfMToyUI 
 	ViewerInterface.h ViewerInterface.cpp
 	sfmviewer.h sfmviewer.cpp
-#	Visualization.h Visualization.cpp
 	${MY_UI_HDRS}
 	${MY_MOC_SRCS}
 	main.cpp
@@ -104,30 +91,8 @@ add_executable(SfMToyUI
 target_link_libraries(SfMToyUI 
 	SfMToyLibrary
 	${OpenCV_LIBS}
-#	${PCL_LIBRARIES}
 	${QT_LIBRARIES} 
 	${QGLVIEWER_LIB}
 	${OpenGL_LIBS}
-	)
-	
-
-IF(APPLE)
-	target_link_libraries(SfMToyUI ${COCOA_LIBS})
-ENDIF(APPLE)
-
-
-add_executable(TestStuff
-	DrawKeypoints.cpp
-	)
-target_link_libraries(TestStuff
-	SfMToyLibrary
-	${OpenCV_LIBS}
-	)
-
-add_executable(TestOpenCVRotations
-	rotations.cpp
-	)
-target_link_libraries(TestOpenCVRotations
-	${OpenCV_LIBS}
 	)
 
