@@ -23,6 +23,8 @@
 project(SfMToyExample)
 cmake_minimum_required(VERSION 2.8)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+
 find_package(OpenCV REQUIRED)
 find_package(OpenMP)
 find_package(OpenGL)
@@ -30,12 +32,8 @@ find_package(OpenGL)
 add_subdirectory(SfMToyLib)
 
 ############### Find Eigen ###############
-set(EIGEN_DIR_HINT "" CACHE PATH "Eigen3 directory")
-find_path(EIGEN_INCLUDE "Eigen/Eigen" PATHS ${EIGEN_DIR_HINT})
-if(NOT EIGEN_INCLUDE)
-	message(FATAL_ERROR "Eigen3 includes not found")
-ENDIF(NOT EIGEN_INCLUDE)
-include_directories(${EIGEN_INCLUDE})
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
 ###########################################
 
 SET(USE_GUI TRUE CACHE BOOL "Build with GUI or just CLI")
@@ -115,6 +113,6 @@ target_link_libraries(SfMToyUI
 	${OpenCV_LIBS}
 	${QT_LIBRARIES} 
 	${QGLVIEWER_LIB}
-	${OpenGL_LIBS}
+	${OPENGL_LIBRARIES}
 	)
 
