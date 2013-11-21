@@ -85,7 +85,7 @@ void SFMViewer::draw() {
 	glDisable(GL_LIGHTING);
 	glBegin(GL_POINTS);
 	for (int i = 0; i < m_pcld.size(); ++i) {
-		glColor3b(m_pcldrgb[i][0],m_pcldrgb[i][1],m_pcldrgb[i][2]);
+        glColor3ub(m_pcldrgb[i][0],m_pcldrgb[i][1],m_pcldrgb[i][2]);
 		glVertex3dv(&(m_pcld[i].x));
 	}
 	glEnd();
