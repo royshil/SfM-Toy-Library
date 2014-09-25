@@ -61,19 +61,42 @@ IF(USE_QT)
 	######### End Qt Stuff #########
 	
 	############### Find LibQGLViewer ###############
+
+
 	set(QGLVIEWER_DIR_HINT "" CACHE PATH "libQGLViewer directory")
-	FIND_LIBRARY(QGLVIEWER_LIB QGLViewer2 PATHS ${QGLVIEWER_DIR_HINT} "${QGLVIEWER_DIR_HINT}/QGLViewer/release")
-	IF(NOT QGLVIEWER_LIB)
-	    FIND_LIBRARY(QGLVIEWER_LIB QGLViewer PATHS ${QGLVIEWER_DIR_HINT} "${QGLVIEWER_DIR_HINT}/QGLViewer/release")
-	ENDIF()
+	FIND_LIBRARY(QGLVIEWER_LIB
+	  NAMES qglviewer-qt4 qglviewer QGLViewer QGLViewer2
+	  PATHS /usr/lib
+	        /usr/local/lib
+	        /opt/local/lib
+	        /sw/lib
+	        ${QGLVIEWER_DIR_HINT}
+	        ENV QGLVIEWERROOT
+	        ENV LD_LIBRARY_PATH
+	        ENV LIBRARY_PATH
+	  PATH_SUFFIXES QGLViewer QGLViewer/release
+	)
 	IF(NOT QGLVIEWER_LIB)
 	   message(FATAL_ERROR "QGLVIEWER not found")
 	ENDIF(NOT QGLVIEWER_LIB)
-	find_path(QGLVIEWER_INCLUDE "QGLViewer/qglviewer.h" PATHS ${QGLVIEWER_DIR_HINT})
+	
+
+
+	FIND_PATH(QGLVIEWER_INCLUDE qglviewer.h
+	    /usr/include/QGLViewer
+	    /opt/local/include/QGLViewer
+	    /usr/local/include/QGLViewer
+	    /sw/include/QGLViewer
+	    /usr/local
+	    ${QGLVIEWER_DIR_HINT}
+	    ENV QGLVIEWERROOT
+	)
 	if(NOT QGLVIEWER_INCLUDE)
 		message(FATAL_ERROR "QGLViewer includes not found")
 	ENDIF(NOT QGLVIEWER_INCLUDE)
+	
 	include_directories(${QGLVIEWER_INCLUDE})
+
 	############################################
 ENDIF(USE_QT)
 
@@ -115,4 +138,8 @@ target_link_libraries(SfMToyUI
 	${QGLVIEWER_LIB}
 	${OPENGL_LIBRARIES}
 	)
+
+if(APPLE)
+	add_custom_command(TARGET SfMToyUI POST_BUILD COMMAND install_name_tool -change QGLViewer.framework/Versions/2/QGLViewer ${QGLVIEWER_DIR_HINT}/QGLViewer.framework/Versions/2/QGLViewer ./SfMToyUI )
+endif()
 
