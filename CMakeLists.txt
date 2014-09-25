@@ -139,3 +139,7 @@ target_link_libraries(SfMToyUI
 	${OPENGL_LIBRARIES}
 	)
 
+if(APPLE)
+	add_custom_command(TARGET SfMToyUI POST_BUILD COMMAND install_name_tool -change QGLViewer.framework/Versions/2/QGLViewer ${QGLVIEWER_DIR_HINT}/QGLViewer.framework/Versions/2/QGLViewer ./SfMToyUI )
+endif()
+
