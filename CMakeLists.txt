@@ -47,7 +47,7 @@ ENDIF(USE_GUI)
 
 IF(USE_QT)
 	########## Qt stuff ##########
-	find_package(Qt4 REQUIRED QtGui QtOpenGL QtXml)
+	find_package(Qt4 REQUIRED QtGui QtOpenGL QtXml QtCore)
 	
 	ADD_DEFINITIONS(${QT_DEFINITIONS})
 	include_directories(${QT_INCLUDES})
