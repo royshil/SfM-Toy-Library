@@ -4,41 +4,40 @@
 
 To compile use CMake: http://www.cmake.org
 
-Prerequisite
+### Prerequisite
 - OpenCV: http://www.opencv.org
 - Eigen3: http://eigen.tuxfamily.org/index.php?title=Main_Page
 - OPTIONAL: SSBA & Sparsesuite: http://www.inf.ethz.ch/personal/chzach/opensource.html (bundeled with the library in the '3rdparty' directory) (Now optional when using the USE_SSBA=OFF option)
-- OPTIONAL: Qt 4.8.x (for the GUI) http://download.qt-project.org/archive/qt/4.8/4.8.6/ and libQGLViewer: http://www.libqglviewer.com/ for the 3D visualization of the point cloud
+- OPTIONAL: Qt 5.x (for the GUI) and libQGLViewer: http://www.libqglviewer.com/ for the 3D visualization of the point cloud
 
 ### How to make
 
 - Optionally build SSBA-3.0, by compiling it from '3rdparty' directory, or use "-DUSE_SSBA=OFF" with cmake.
 - If SSBA will not be used, the internal OpenCV bundle adjuster will be used, but I’ve had better luck with SSBA (I may be using the OpenCV bundle adjuster wrong, though).
 
-On MacOS
+#### On OSX Using XCode
 
 	mkdir build
 	cd build
 	cmake -DSSBA_LIBRARY_DIR=../../SSBA-3.0/build -G "Xcode" ..
 	open SfMToyExample.xcodeproj
-
-On Linux
+	
+#### On Linux (or OSX)
 
 	mkdir build
 	cd build
 	cmake -SSBA_LIBRARY_DIR=../../SSBA-3.0/build -G "Unix Makefiles" ..
 	make 
 
-On Windows
+#### On Windows
 
 Use Cmake's GUI to create a MSVC solution, and build it.
-
 
 ## Use
 
 See http://www.morethantechnical.com/2012/02/07/structure-from-motion-and-3d-reconstruction-on-the-easy-in-opencv-2-3-w-code/
 
-Execute
+### Execute
 
 	USAGE: SfMToyUI.exe <path_to_images> [use rich features (RICH/OF) = RICH] [use GPU (GPU/CPU) = GPU] [down/upscale factor = 1.0]
 
