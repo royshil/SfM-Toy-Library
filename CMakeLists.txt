@@ -21,7 +21,7 @@
 #  SOFTWARE.
 
 project(SfMToyExample)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
@@ -47,22 +47,29 @@ ENDIF(USE_GUI)
 
 IF(USE_QT)
 	########## Qt stuff ##########
-	find_package(Qt4 REQUIRED QtGui QtOpenGL QtXml)
+	IF(APPLE)
+        # Assuming qt5 install from Homebrew
+        set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};/usr/local/opt/qt5/lib/cmake/")
+    ENDIF()
 	
-	ADD_DEFINITIONS(${QT_DEFINITIONS})
-	include_directories(${QT_INCLUDES})
-	include(${QT_USE_FILE}) 
+	find_package(Qt5Core REQUIRED)
+    find_package(Qt5Gui REQUIRED)
+    find_package(Qt5Widgets REQUIRED)
+    find_package(Qt5OpenGL REQUIRED)
+    find_package(Qt5Xml REQUIRED)
 	
-	QT4_WRAP_UI( MY_UI_HDRS sfmtoy.ui )
-	QT4_WRAP_CPP( MY_MOC_SRCS ViewerInterface.h sfmviewer.h )
-	SOURCE_GROUP(QT_MOC_SRCS FILES ${MY_MOC_SRCS})
+    # Find includes in corresponding build directories
+    set(CMAKE_INCLUDE_CURRENT_DIR ON)
+    # Instruct CMake to run moc and uic automatically when needed.
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTOUIC ON)
+    
+    set(MY_QT_LIBRARIES Qt5::Core Qt5::Gui Qt5::Widgets Qt5::OpenGL Qt5::Xml)
 	
 	INCLUDE_DIRECTORIES( ${CMAKE_BINARY_DIR} ) #qt wrapping creates some sources
 	######### End Qt Stuff #########
 	
 	############### Find LibQGLViewer ###############
-
-
 	set(QGLVIEWER_DIR_HINT "" CACHE PATH "libQGLViewer directory")
 	FIND_LIBRARY(QGLVIEWER_LIB
 	  NAMES qglviewer-qt4 qglviewer QGLViewer QGLViewer2
@@ -75,21 +82,19 @@ IF(USE_QT)
 	        ENV LD_LIBRARY_PATH
 	        ENV LIBRARY_PATH
 	  PATH_SUFFIXES QGLViewer QGLViewer/release
+	  DOC "Location of QGLViewer lib" 
 	)
 	IF(NOT QGLVIEWER_LIB)
 	   message(FATAL_ERROR "QGLVIEWER not found")
 	ENDIF(NOT QGLVIEWER_LIB)
-	
-
 
 	FIND_PATH(QGLVIEWER_INCLUDE qglviewer.h
-	    /usr/include/QGLViewer
-	    /opt/local/include/QGLViewer
-	    /usr/local/include/QGLViewer
-	    /sw/include/QGLViewer
-	    /usr/local
-	    ${QGLVIEWER_DIR_HINT}
-	    ENV QGLVIEWERROOT
+      PATHS /usr/include
+            /usr/local/include
+            /opt/local/include
+	        ${QGLVIEWER_LIB}/Headers
+	        ${QGLVIEWER_DIR_HINT}
+	  ENV QGLVIEWERROOT
 	)
 	if(NOT QGLVIEWER_INCLUDE)
 		message(FATAL_ERROR "QGLViewer includes not found")
@@ -126,20 +131,18 @@ include_directories(
 add_executable(SfMToyUI 
 	ViewerInterface.h ViewerInterface.cpp
 	sfmviewer.h sfmviewer.cpp
-	${MY_UI_HDRS}
-	${MY_MOC_SRCS}
 	main.cpp
 	)
 
 target_link_libraries(SfMToyUI 
 	SfMToyLibrary
 	${OpenCV_LIBS}
-	${QT_LIBRARIES} 
+	${MY_QT_LIBRARIES} 
 	${QGLVIEWER_LIB}
 	${OPENGL_LIBRARIES}
 	)
 
 if(APPLE)
-	add_custom_command(TARGET SfMToyUI POST_BUILD COMMAND install_name_tool -change QGLViewer.framework/Versions/2/QGLViewer ${QGLVIEWER_DIR_HINT}/QGLViewer.framework/Versions/2/QGLViewer ./SfMToyUI )
+	add_custom_command(TARGET SfMToyUI POST_BUILD COMMAND install_name_tool -change QGLViewer.framework/Versions/2/QGLViewer ${QGLVIEWER_LIB}/Versions/2/QGLViewer ./SfMToyUI )
 endif()
 

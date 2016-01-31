@@ -34,10 +34,14 @@
 #define STRATEGY_USE_FEATURE_MATCH		4
 #define STRATEGY_USE_HORIZ_DISPARITY	8
 
+typedef std::vector<cv::Point3d> PointCloud;
+
 class IDistance {
 public:
 	virtual void OnlyMatchFeatures() = 0;
 	virtual void RecoverDepthFromImages() = 0;
-	virtual std::vector<cv::Point3d> getPointCloud() = 0;
+	virtual PointCloud getPointCloud() = 0;
 	virtual const std::vector<cv::Vec3b>& getPointCloudRGB() = 0;
+
+	virtual ~IDistance() {}
 };
