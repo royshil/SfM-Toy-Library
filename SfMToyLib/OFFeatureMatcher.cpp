@@ -37,8 +37,11 @@
 
 #ifdef __SFM__DEBUG__
 #include <opencv2/highgui/highgui.hpp>
-#include <omp.h>
 #include <sstream>
+
+#ifdef HAVE_OPENMP
+#include <omp.h>
+#endif
 #endif
 
 #include <set>
