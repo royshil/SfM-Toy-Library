@@ -30,8 +30,14 @@
 
 #pragma warning(disable: 4244 18 4996 4800)
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/features2d/features2d.hpp>
+#include </usr/local/Cellar/opencv3/3.1.0_2/include/opencv2/core/core.hpp>
+#include </usr/local/Cellar/opencv3/3.1.0_2/include/opencv2/features2d/features2d.hpp>
+#include </usr/local/Cellar/opencv3/3.1.0_2/include/opencv2/highgui/highgui.hpp>
+#include </usr/local/Cellar/opencv3/3.1.0_2/include/opencv2/video/tracking.hpp>
+#include </usr/local/Cellar/opencv3/3.1.0_2/include/opencv2/imgproc/imgproc.hpp>
+#include </usr/local/Cellar/opencv3/3.1.0_2/include/opencv2/calib3d/calib3d.hpp>
+//#include </usr/local/Cellar/opencv3/3.1.0_2/include/opencv2/nonfree/nonfree.hpp>
+
 #include <vector>
 #include <iostream>
 #include <list>

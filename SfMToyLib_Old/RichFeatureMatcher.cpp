@@ -28,14 +28,7 @@
  */
 
 #include "RichFeatureMatcher.h"
-
 #include "FindCameraMatrices.h"
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/video/tracking.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
-#include <opencv2/nonfree/nonfree.hpp>
 
 #include <iostream>
 #include <set>
@@ -48,8 +41,8 @@ RichFeatureMatcher::RichFeatureMatcher(std::vector<cv::Mat>& imgs_,
 									   std::vector<std::vector<cv::KeyPoint> >& imgpts_) :
 	imgpts(imgpts_), imgs(imgs_)
 {
-	detector = FeatureDetector::create("PyramidFAST");
-	extractor = DescriptorExtractor::create("ORB");
+	detector = new ORB; //FeatureDetector::create("PyramidFAST");
+	extractor = new ORB; //DescriptorExtractor::create("ORB");
 	
 	std::cout << " -------------------- extract feature points for all images -------------------\n";
 	

@@ -30,8 +30,7 @@
 #include <iostream>
 #include <string.h>
 
-#include "Distance.h"
-#include "MultiCameraPnP.h"
+#include "SfMToyLib/SfM.h"
 
 #ifdef HAVE_GUI
 #include <QApplication>
@@ -51,12 +50,6 @@ using namespace std;
 int main(int argc, char** argv) { //test with real photos
 	// Read command lines arguments.
 	QApplication application(argc,argv);
-
-//	QGLFormat glFormat;
-//	glFormat.setVersion( 3, 2 );
-//	glFormat.setProfile( QGLFormat::CoreProfile ); // Requires >=Qt-4.8.0
-//	//    glFormat.setSampleBuffers( true );
-//	QGLFormat::setDefaultFormat(glFormat);
 
 	// Instantiate the viewer.
 	ViewerInterface viewer;

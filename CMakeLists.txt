@@ -25,9 +25,17 @@ cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 3.1 REQUIRED
+    COMPONENTS core calib3d features2d imgproc highgui 
+    PATHS "/usr/local/Cellar/opencv3/3.1.0_2/share/OpenCV/" NO_DEFAULT_PATH)
 find_package(OpenMP)
 find_package(OpenGL)
+find_package(Boost COMPONENTS system chrono filesystem REQUIRED)
+
+include_directories(${Boost_INCLUDE_DIR})
+link_directories(${Boost_LIBRARY_DIR})
+
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_subdirectory(SfMToyLib)
 
@@ -49,7 +57,7 @@ IF(USE_QT)
 	########## Qt stuff ##########
 	IF(APPLE)
         # Assuming qt5 install from Homebrew
-        set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};/usr/local/opt/qt5/lib/cmake/")
+        set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} /usr/local/opt/qt5/lib/cmake/)
     ENDIF()
 	
 	find_package(Qt5Core REQUIRED)
@@ -140,9 +148,11 @@ target_link_libraries(SfMToyUI
 	${MY_QT_LIBRARIES} 
 	${QGLVIEWER_LIB}
 	${OPENGL_LIBRARIES}
+	${Boost_LIBRARIES}
 	)
 
 if(APPLE)
-	add_custom_command(TARGET SfMToyUI POST_BUILD COMMAND install_name_tool -change QGLViewer.framework/Versions/2/QGLViewer ${QGLVIEWER_LIB}/Versions/2/QGLViewer ./SfMToyUI )
+	add_custom_command(TARGET SfMToyUI POST_BUILD 
+	   COMMAND install_name_tool -change QGLViewer.framework/Versions/2/QGLViewer ${QGLVIEWER_LIB}/Versions/2/QGLViewer ./SfMToyUI )
 endif()
 

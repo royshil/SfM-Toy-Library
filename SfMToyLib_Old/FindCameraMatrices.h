@@ -28,9 +28,6 @@
  */
 #pragma once
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/features2d/features2d.hpp>
-
 #include "Common.h"
 
 //#undef __SFM__DEBUG__

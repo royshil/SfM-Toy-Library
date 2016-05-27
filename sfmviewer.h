@@ -28,6 +28,7 @@
  */
 #pragma once
 
+#include "SfMToyLib/SfM.h"
 
 #include <QGLViewer/qglviewer.h>
 #include <QFileDialog>
@@ -35,24 +36,18 @@
 #include <QThreadPool>
 #include <Eigen/Eigen>
 
-#include "MultiCameraPnP.h"
-
 void open_imgs_dir(const char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor);
 
-class SFMViewer : public QGLViewer, public SfMUpdateListener, public QRunnable
+class SFMViewer : public QGLViewer, /*public SfMUpdateListener,*/ public QRunnable
 {
 	Q_OBJECT
-	cv::Ptr<MultiCameraPnP> 		distance;
+	cv::Ptr<sfmtoylib::SfM> 		sfmAPI;
 
-	std::vector<cv::Mat> 			images;
-	std::vector<std::string> 		images_names;
 	std::vector<cv::Point3d> 		m_pcld;
 	std::vector<cv::Vec3b> 			m_pcldrgb;
 	std::vector<cv::Matx34d> 		m_cameras;
 	std::vector<Eigen::Affine3d> 	m_cameras_transforms;
 	Eigen::Affine3d 				m_global_transform;
-
-//	QThreadPool 					qtp;
 
 	float 							vizScale;
 	double 							m_scale_cameras_down;
@@ -63,8 +58,7 @@ protected :
 
 public:
 	SFMViewer(QWidget *parent = 0):QGLViewer(QGLFormat::defaultFormat(),parent),vizScale(1.0),m_scale_cameras_down(1.0) {
-		distance = new MultiCameraPnP();
-		distance->attach(this);
+		sfmAPI = new sfmtoylib::SfM();
 		m_global_transform = Eigen::Affine3d::Identity();
 	}
     ~SFMViewer() { saveStateToFile(); }
@@ -76,30 +70,26 @@ public:
 			std::vector<cv::Matx34d> cameras);
 
 
-	void run() { distance->RecoverDepthFromImages(); }
+	void run() {
+	    sfmAPI->runSfM();
+	}
 
 public slots:
     void openDirectory() {
-        images.clear();
-        images_names.clear();
         std::string imgs_path = QFileDialog::getExistingDirectory(this, tr("Open Images Directory"), ".").toStdString();
+        sfmAPI->setImagesDirectory(imgs_path);
+
         double scale_factor = 1.0;
         QLineEdit* l = parentWidget()->findChild<QLineEdit*>("lineEdit_scaleFactor");
         if (l) {
             scale_factor = l->text().toFloat();
             std::cout << "downscale to " << scale_factor << std::endl;
-        }
-        open_imgs_dir(imgs_path.c_str(), images, images_names, scale_factor);
-        if (images.size() == 0) {
-            std::cerr << "can't get image files" << std::endl;
-        } else {
-            distance->setImages(images, images_names, imgs_path);
+            //TODO: apply to SfM
         }
     }
 
-	void setUseRichFeatures(bool b) { distance->use_rich_features = b; }
-
-	void setUseGPU(bool b) { distance->use_gpu = b; }
+//	void setUseRichFeatures(bool b) { sfmAPI->use_rich_features = b; }
+//	void setUseGPU(bool b) { sfmAPI->use_gpu = b; }
 
 	void runSFM() {
 		this->setAutoDelete(false);
