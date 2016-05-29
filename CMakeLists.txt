@@ -26,11 +26,16 @@ cmake_minimum_required(VERSION 3.0)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 find_package(OpenCV 3.1 REQUIRED
-    COMPONENTS core calib3d features2d imgproc highgui 
+    COMPONENTS core calib3d features2d imgproc highgui stitching
     PATHS "/usr/local/Cellar/opencv3/3.1.0_2/share/OpenCV/" NO_DEFAULT_PATH)
-find_package(OpenMP)
 find_package(OpenGL)
 find_package(Boost COMPONENTS system chrono filesystem REQUIRED)
+
+if (NOT APPLE)
+    find_package(OpenMP)
+else() 
+    add_definitions("-std=gnu++11")
+endif()
 
 include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIR})
@@ -132,26 +137,41 @@ endif()
 
 include_directories(
 	SfMToyLib
-	3rdparty/SSBA-3.0
 	)
 
-# GUI part
-add_executable(SfMToyUI 
-	ViewerInterface.h ViewerInterface.cpp
-	sfmviewer.h sfmviewer.cpp
-	main.cpp
-	)
+if (USE_GUI)
+    # GUI app
+    add_executable(SfMToyUI 
+    	ViewerInterface.h ViewerInterface.cpp
+    	sfmviewer.h sfmviewer.cpp
+    	main.cpp
+    	)
+    	
+    set(SFM_TOY_APP_LIBS    
+            ${MY_QT_LIBRARIES} 
+            ${QGLVIEWER_LIB}
+            ${OPENGL_LIBRARIES}
+            ${OpenCV_LIBS}
+            ${Boost_LIBRARIES}
+            )
+else()
+    # Command-line app
+    add_executable(SfMToyUI
+        main.cpp
+        )
+
+    set(SFM_TOY_APP_LIBS    
+            ${OpenCV_LIBS}
+            ${Boost_LIBRARIES}
+        )
+endif()
 
 target_link_libraries(SfMToyUI 
 	SfMToyLibrary
-	${OpenCV_LIBS}
-	${MY_QT_LIBRARIES} 
-	${QGLVIEWER_LIB}
-	${OPENGL_LIBRARIES}
-	${Boost_LIBRARIES}
+	${SFM_TOY_APP_LIBS}
 	)
 
-if(APPLE)
+if(APPLE AND USE_GUI)
 	add_custom_command(TARGET SfMToyUI POST_BUILD 
 	   COMMAND install_name_tool -change QGLViewer.framework/Versions/2/QGLViewer ${QGLVIEWER_LIB}/Versions/2/QGLViewer ./SfMToyUI )
 endif()

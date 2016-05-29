@@ -9,22 +9,44 @@
 
 #include "SfM2DFeatureUtilities.h"
 
+using namespace cv;
+using namespace std;
+
 namespace sfmtoylib {
 
-SfM2DFeatureUtilities::SfM2DFeatureUtilities() {
-    // TODO Auto-generated constructor stub
+const double NN_MATCH_RATIO = 0.8f; // Nearest-neighbour matching ratio
 
+SfM2DFeatureUtilities::SfM2DFeatureUtilities() {
+    // initialize detector and extractor
+    mDetector = ORB::create(2000);
+    mMatcher = DescriptorMatcher::create("BruteForce-Hamming");
 }
 
 SfM2DFeatureUtilities::~SfM2DFeatureUtilities() {
-    // TODO Auto-generated destructor stub
 }
 
-void SfM2DFeatureUtilities::extractFeatures(const cv::Mat& image, FeaturePointsDescriptors& features) {
+Features SfM2DFeatureUtilities::extractFeatures(const cv::Mat& image) {
+    Features features;
+    mDetector->detectAndCompute(image, noArray(), features.keyPoints, features.descriptors);
+    return features;
 }
 
-void SfM2DFeatureUtilities::matchFeatures(const FeaturePointsDescriptors& featuresLeft,
-        const FeaturePointsDescriptors& featuresRight, std::vector<cv::DMatch>& matching) {
+Matching SfM2DFeatureUtilities::matchFeatures(
+        const Features& featuresLeft,
+        const Features& featuresRight) {
+    //initial matching between features
+    vector<Matching> initialMatching;
+    mMatcher->knnMatch(featuresLeft.descriptors, featuresRight.descriptors, initialMatching, 2);
+
+    //prune the matching using the ratio test
+    Matching prunedMatching;
+    for(unsigned i = 0; i < initialMatching.size(); i++) {
+        if(initialMatching[i][0].distance < NN_MATCH_RATIO * initialMatching[i][1].distance) {
+            prunedMatching.push_back(initialMatching[i][0]);
+        }
+    }
+
+    return prunedMatching;
 }
 
 } /* namespace sfmtoylib */

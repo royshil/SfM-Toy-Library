@@ -10,28 +10,26 @@
 #ifndef SFMTOYLIB_SFM2DFEATUREUTILITIES_H_
 #define SFMTOYLIB_SFM2DFEATUREUTILITIES_H_
 
-#include <opencv2/core/core.hpp>
+#include "SfMCommon.h"
+
+#include <opencv2/features2d.hpp>
 
 namespace sfmtoylib {
-
-struct FeaturePointsDescriptors {
-    std::vector<cv::KeyPoint> keyPoints;
-    cv::Mat                   descriptors;
-};
 
 class SfM2DFeatureUtilities {
 public:
     SfM2DFeatureUtilities();
     virtual ~SfM2DFeatureUtilities();
 
-    void extractFeatures(
-            const cv::Mat&             image,
-            FeaturePointsDescriptors&  features);
+    Features extractFeatures(const cv::Mat& image);
 
-    void matchFeatures(
-            const FeaturePointsDescriptors& featuresLeft,
-            const FeaturePointsDescriptors& featuresRight,
-            std::vector<cv::DMatch>&        matching);
+    Matching matchFeatures(
+            const Features& featuresLeft,
+            const Features& featuresRight);
+
+private:
+    cv::Ptr<cv::Feature2D>         mDetector;
+    cv::Ptr<cv::DescriptorMatcher> mMatcher;
 
 };
 

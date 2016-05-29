@@ -10,10 +10,12 @@
 #ifndef SFMTOYLIB_SFM_H_
 #define SFMTOYLIB_SFM_H_
 
+#include "SfMCommon.h"
 #include "SfM2DFeatureUtilities.h"
 
 #include <string>
 #include <vector>
+#include <map>
 
 namespace sfmtoylib {
 
@@ -23,6 +25,8 @@ enum ErrorCode {
 };
 
 class SfM {
+    typedef std::vector<std::vector<Matching> > MatchMatrix;
+
 public:
     SfM();
     virtual ~SfM();
@@ -61,11 +65,25 @@ private:
      */
     void adjustCurrentBundle();
 
+    /**
+     * Sort the image pairs for the initial baseline triangulation based on the number of homography-inliers
+     * @return scoring of views-pairs
+     */
+    std::map<float, ImagePair> sortViewsForBaseline();
 
-    std::vector<std::string>              mImageFilenames;
-    std::vector<cv::Mat>                  mImages;
-    std::vector<FeaturePointsDescriptors> mImageFeatures;
-    SfM2DFeatureUtilities                 mFeatureUtilities;
+    /**
+     * Add more views from the set to the 3D point cloud
+     */
+    void addMoreViewsToReconstruction();
+
+
+    std::vector<std::string>      mImageFilenames;
+    std::vector<cv::Mat>          mImages;
+    std::vector<Features>         mImageFeatures;
+    MatchMatrix                   mFeatureMatchMatrix;
+    SfM2DFeatureUtilities         mFeatureUtil;
+    Intrinsics                    mIntrinsics;
+    PointCloud                    mReconstructionCloud;
 };
 
 } /* namespace sfmtoylib */
