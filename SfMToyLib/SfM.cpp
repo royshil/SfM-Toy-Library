@@ -15,6 +15,7 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/stitching/detail/motion_estimators.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -23,8 +24,6 @@ using namespace std;
 using namespace cv;
 
 namespace sfmtoylib {
-
-const float POSE_INLIERS_MINIMAL_RATIO = 0.5;
 
 SfM::SfM() {
 }
@@ -44,6 +43,8 @@ ErrorCode SfM::runSfM() {
                                            0,   0,  1);
     mIntrinsics.Kinv = mIntrinsics.K.inv();
     mIntrinsics.distortion = Mat_<float>::zeros(1, 4);
+
+    mCameraPoses.resize(mImages.size());
 
     //First - extract features from all images
     extractFeatures();
@@ -187,6 +188,12 @@ void SfM::findBaselineTriangulation() {
        }
 
        mReconstructionCloud = pointCloud;
+       mCameraPoses[i] = Pleft;
+       mCameraPoses[j] = Pright;
+       mDoneViews.insert(i);
+       mDoneViews.insert(j);
+       mGoodViews.insert(i);
+       mGoodViews.insert(j);
 
        adjustCurrentBundle();
 
@@ -232,7 +239,119 @@ map<float, ImagePair> SfM::sortViewsForBaseline() {
 void SfM::addMoreViewsToReconstruction() {
     cout << "----------------- Add More Views ------------------" << endl;
 
+    while (mDoneViews.size() != mImages.size()) {
+        //Find the best view to add according to the largest number of 2D-3D corresponding points
+        Images2D3DMatches matches2D3D = find2D3DMatches();
 
+        size_t bestView;
+        size_t bestNumMatches = 0;
+        for (const auto& match2D3D : matches2D3D) {
+            if (match2D3D.second.points2D.size() > bestNumMatches) {
+                bestView       = match2D3D.first;
+                bestNumMatches = match2D3D.second.points2D.size();
+            }
+        }
+        cout << "Best view " << bestView << " has " << matches2D3D[bestView].points2D.size() << " matches" << endl;
+
+        mDoneViews.insert(bestView);
+
+        Matx34f newCameraPose;
+        bool success = SfMStereoUtilities::findCameraPoseFrom2D3DMatch(
+                mIntrinsics,
+                matches2D3D[bestView],
+                newCameraPose);
+
+        if (not success) {
+            cerr << "Cannot recover camera pose for view " << bestView << endl;
+            continue;
+        }
+
+        mCameraPoses[bestView] = newCameraPose;
+
+        cout << "view " << bestView << endl << newCameraPose << endl;
+
+        for (const int goodView : mGoodViews) {
+            //since match matrix is upper-tringular non symmetric - use lower index as left
+            size_t leftViewIdx  = (goodView < bestView) ? goodView : bestView;
+            size_t rightViewIdx = (goodView < bestView) ? bestView : goodView;
+
+            PointCloud pointCloud;
+            SfMStereoUtilities::triangulateViews(
+                    mIntrinsics,
+                    { leftViewIdx, rightViewIdx },
+                    mFeatureMatchMatrix[leftViewIdx][rightViewIdx],
+                    mImageFeatures[leftViewIdx],
+                    mImageFeatures[rightViewIdx],
+                    mCameraPoses[leftViewIdx],
+                    mCameraPoses[rightViewIdx],
+                    pointCloud
+                    );
+        }
+
+        mGoodViews.insert(bestView);
+    }
+}
+
+SfM::Images2D3DMatches SfM::find2D3DMatches() {
+    Images2D3DMatches matches;
+
+    //scan all not-done views
+    for (size_t viewIdx = 0; viewIdx < mImages.size(); viewIdx++) {
+        if (mDoneViews.find(viewIdx) != mDoneViews.end()) {
+            continue; //skip done views
+        }
+
+//        cout << "work " << viewIdx << endl;
+
+        Image2D3DMatch match2D3D;
+
+        //scan all cloud 3D points
+        for (const Point3DInMap& cloudPoint : mReconstructionCloud) {
+//            cout << "3d pt " << cloudPoint.p << endl;
+
+            //scan all originating views for that 3D point
+            for (const auto& origViewAndPoint : cloudPoint.originatingViews) {
+                //check for 2D-2D matching via the match matrix
+                int originatingViewIndex        = origViewAndPoint.first;
+                int originatingViewFeatureIndex = origViewAndPoint.second;
+
+//                cout << "orig view idx " << originatingViewIndex << " feature idx " << originatingViewFeatureIndex << endl;
+
+                //match matrix is upper-triangular (not symmetric) so the left index must be the smaller one
+                int leftViewIdx  = (originatingViewIndex < viewIdx) ? originatingViewIndex : viewIdx;
+                int rightViewIdx = (originatingViewIndex < viewIdx) ? viewIdx : originatingViewIndex;
+
+                //scan all 2D-2D matches between originating view and new view
+                for (const DMatch& m : mFeatureMatchMatrix[leftViewIdx][rightViewIdx]) {
+                    int matched2DPointInNewView = -1;
+                    if (originatingViewIndex < viewIdx) { //originating view is 'left'
+                        if (m.queryIdx == originatingViewFeatureIndex) {
+                            matched2DPointInNewView = m.trainIdx;
+                        }
+                    } else {                              //originating view is 'right'
+                        if (m.trainIdx == originatingViewFeatureIndex) {
+                            matched2DPointInNewView = m.queryIdx;
+                        }
+                    }
+                    if (matched2DPointInNewView >= 0) {
+//                        cout << "found match to new 2d feature " << matched2DPointInNewView << endl;
+                        const Features& newViewFeatures = mImageFeatures[viewIdx];
+//                        cout << "leftViewIdx " << leftViewIdx << endl;
+//                        cout << "rightViewIdx " << rightViewIdx << endl;
+//                        cout << "newViewFeatures " << newViewFeatures.points.size() << endl;
+//                        cout << "found 2d point " << newViewFeatures.points[matched2DPointInNewView] << endl;
+                        match2D3D.points2D.push_back(newViewFeatures.points[matched2DPointInNewView]);
+                        match2D3D.points3D.push_back(cloudPoint.p);
+                        break;
+                    }
+                }
+            }
+        }
+
+        matches[viewIdx] = match2D3D;
+    }
+
+    return matches;
 }
 
 } /* namespace sfmtoylib */

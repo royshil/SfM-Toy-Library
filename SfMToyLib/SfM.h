@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 
 namespace sfmtoylib {
 
@@ -26,6 +27,7 @@ enum ErrorCode {
 
 class SfM {
     typedef std::vector<std::vector<Matching> > MatchMatrix;
+    typedef std::map<int, Image2D3DMatch> Images2D3DMatches;
 
 public:
     SfM();
@@ -39,7 +41,11 @@ public:
     bool setImagesDirectory(const std::string directoryPath);
 
     /**
-     * Run the SfM operation.
+     * This is the main function of this class. Start here.
+     * Run the SfM operation:
+     *  - Extract and match image features.
+     *  - Find a baseline triangulation.
+     *  - Sequentially add more views to the cloud.
      * @return error code.
      */
     ErrorCode runSfM();
@@ -76,14 +82,24 @@ private:
      */
     void addMoreViewsToReconstruction();
 
+    /**
+     * For all remaining images to process, find the set of 2D points that correlate to 3D points in the current cloud.
+     * This is done by scanning the 3D cloud and checking the originating 2D views of each 3D point to see if they
+     * match 2D features in the new views.
+     * @return 2D-3D matching from the image features to the cloud
+     */
+    Images2D3DMatches find2D3DMatches();
 
-    std::vector<std::string>      mImageFilenames;
-    std::vector<cv::Mat>          mImages;
-    std::vector<Features>         mImageFeatures;
-    MatchMatrix                   mFeatureMatchMatrix;
-    SfM2DFeatureUtilities         mFeatureUtil;
-    Intrinsics                    mIntrinsics;
-    PointCloud                    mReconstructionCloud;
+    std::vector<std::string>  mImageFilenames;
+    std::vector<cv::Mat>      mImages;
+    std::vector<Features>     mImageFeatures;
+    std::vector<cv::Matx34f>  mCameraPoses;
+    std::set<int>             mDoneViews;
+    std::set<int>             mGoodViews;
+    MatchMatrix               mFeatureMatchMatrix;
+    SfM2DFeatureUtilities     mFeatureUtil;
+    Intrinsics                mIntrinsics;
+    PointCloud                mReconstructionCloud;
 };
 
 } /* namespace sfmtoylib */

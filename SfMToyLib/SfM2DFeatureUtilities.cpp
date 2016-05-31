@@ -28,6 +28,7 @@ SfM2DFeatureUtilities::~SfM2DFeatureUtilities() {
 Features SfM2DFeatureUtilities::extractFeatures(const cv::Mat& image) {
     Features features;
     mDetector->detectAndCompute(image, noArray(), features.keyPoints, features.descriptors);
+    KeyPointsToPoints(features.keyPoints, features.points);
     return features;
 }
 

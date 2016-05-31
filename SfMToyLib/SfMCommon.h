@@ -22,6 +22,9 @@ const cv::Rect ROT(0, 0, 3, 3);
 ///Translational element in a 3x4 matrix
 const cv::Rect TRA(3, 0, 1, 3);
 
+///Minimal ratio of inliers-to-total number of points for computing camera pose
+const float POSE_INLIERS_MINIMAL_RATIO = 0.5;
+
 struct Intrinsics {
     cv::Mat K;
     cv::Mat Kinv;
@@ -36,6 +39,12 @@ std::ostream& operator<< (std::ostream& stream, const ImagePair& pair);
 
 typedef std::vector<cv::KeyPoint> Keypoints;
 typedef std::vector<cv::Point2f>  Points2f;
+typedef std::vector<cv::Point3f>  Points3f;
+
+struct Image2D3DMatch {
+    Points2f points2D;
+    Points3f points3D;
+};
 
 struct Features {
     Keypoints keyPoints;
@@ -50,7 +59,7 @@ struct Point3DInMap {
     cv::Point3f p;
 
     /**
-     * A mapping from image index to 2D point index in that image list of features.
+     * A mapping from image index to 2D point index in that image's list of features.
      */
     std::map<int, int> originatingViews;
 };

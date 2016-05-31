@@ -73,6 +73,19 @@ public:
             const cv::Matx34f& Pright,
             PointCloud&        pointCloud
             );
+
+    /**
+     * Find the camera location based on 2D 3D point correspondence using PnP.
+     * @param intrinsics camera intrinsics
+     * @param match      a 2d-3d point matching
+     * @param cameraPose Output: camera pose
+     * @return true on success.
+     */
+    static bool findCameraPoseFrom2D3DMatch(
+            const Intrinsics&     intrinsics,
+            const Image2D3DMatch& match,
+            cv::Matx34f&          cameraPose
+            );
 };
 
 } /* namespace sfmtoylib */
