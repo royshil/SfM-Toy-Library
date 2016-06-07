@@ -2,33 +2,43 @@
 
 This is a reference implementation of a Structure-from-Motion pipeline in OpenCV, following the work of Snavely et al. [2] and Hartley and Zisserman [1].
 
+*Note:* This is not a complete and robust SfM pipeline implementation. The purpose of this code is to serve as a tutorial and reference for OpenCV users and a soft intro to SfM in OpenCV. If you are looking for a more complete solution with many more options and parameters to tweak, check out the following:
+
+ * OpenMVG http://openmvg.readthedocs.io/en/latest/#
+ * libMV https://github.com/libmv/libmv
+
+SfM-Toy-Library is now using OpenCV 3, which introduced many new convenience functions to Structure from Motion, the implementation is much cleaner and simpler. 
+
+Ceres solver was chosen to do bundle adjustment, for its simple API, straightforward modeling of the problem and long-term support.
+
+Also added are doxygen-style documentation comments throughout.
+
 ## Compile
 
 To compile use CMake: http://www.cmake.org
 
 ### Prerequisite
-- OpenCV: http://www.opencv.org
-- Eigen3: http://eigen.tuxfamily.org/index.php?title=Main_Page
-- OPTIONAL: SSBA & Sparsesuite: https://github.com/chzach/SSBA/tree/master/SSBA-4.0 (bundeled with the library in the '3rdparty' directory) (Now optional when using the USE_SSBA=OFF option)
+- OpenCV 3.x: http://www.opencv.org
+- Ceres Solver (for bundle adjustment): http://ceres-solver.org/
+- Boost C++ libraries (system, chrono, filesystem) v1.54+: http://www.boost.org/
 - OPTIONAL: Qt 5.x (for the GUI) and libQGLViewer: http://www.libqglviewer.com/ for the 3D visualization of the point cloud
 
 ### How to make
 
-- Optionally build SSBA-3.0, by compiling it from '3rdparty' directory, or use "-DUSE_SSBA=OFF" with cmake.
-- If SSBA will not be used, the internal OpenCV bundle adjuster will be used, but I’ve had better luck with SSBA (I may be using the OpenCV bundle adjuster wrong, though).
-
 #### On OSX Using XCode
 
-	mkdir build
-	cd build
-	cmake -DSSBA_LIBRARY_DIR=../../SSBA-3.0/build -G "Xcode" ..
-	open SfMToyExample.xcodeproj
-	
-#### On Linux (or OSX)
+Get Boost and Ceres using homebrew: `brew install boost ceres-solver`
 
 	mkdir build
 	cd build
-	cmake -DSBA_LIBRARY_DIR=../../SSBA-3.0/build -G "Unix Makefiles" ..
+	cmake -G "Xcode" ..
+	open SfMToyExample.xcodeproj
+	
+#### On Linux (or OSX) via a Makefile
+
+	mkdir build
+	cd build
+	cmake -G "Unix Makefiles" ..
 	make 
 
 #### On Windows

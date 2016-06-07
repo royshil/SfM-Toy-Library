@@ -128,6 +128,8 @@ bool SfMStereoUtilities::triangulateViews(
     //todo: cheirality check (all points z > 0)
 
     for (size_t i = 0; i < points3d.rows; i++) {
+        //TODO: check if point reprojection error is small
+
         Point3DInMap p;
         p.p = Point3f(points3d.at<float>(i, 0),
                       points3d.at<float>(i, 1),

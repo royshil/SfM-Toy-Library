@@ -90,6 +90,12 @@ private:
      */
     Images2D3DMatches find2D3DMatches();
 
+    /**
+     * Merge the given point cloud into the existing reconstruction, by merging 3D points from multiple views.
+     * @param cloud to merge
+     */
+    void mergeNewPointCloud(const PointCloud& cloud);
+
     std::vector<std::string>  mImageFilenames;
     std::vector<cv::Mat>      mImages;
     std::vector<Features>     mImageFeatures;

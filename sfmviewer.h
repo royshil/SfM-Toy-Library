@@ -34,7 +34,7 @@
 #include <QFileDialog>
 #include <QLineEdit>
 #include <QThreadPool>
-#include <Eigen/Eigen>
+#include <eigen3/Eigen/Eigen>
 
 void open_imgs_dir(const char* dir_name, std::vector<cv::Mat>& images, std::vector<std::string>& images_names, double downscale_factor);
 

@@ -14,7 +14,6 @@
 #include <algorithm>
 
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/stitching/detail/motion_estimators.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
 #include <boost/algorithm/string.hpp>
@@ -172,6 +171,14 @@ void SfM::findBaselineTriangulation() {
             continue;
         }
 
+        Mat outImage;
+        drawMatches(mImages[i], prunedLeft.keyPoints,
+                mImages[j], prunedRight.keyPoints,
+                GetAlignedMatching(prunedLeft.keyPoints.size()),
+                outImage);
+        imshow("outimage", outImage);
+        waitKey(0);
+
         cout << "---- Triangulate from stereo views" << endl;
         success = SfMStereoUtilities::triangulateViews(
                 mIntrinsics,
@@ -203,7 +210,11 @@ void SfM::findBaselineTriangulation() {
 
 
 void SfM::adjustCurrentBundle() {
-    cv::detail::BundleAdjusterReproj ba;
+    SfMBundleAdjustmentUtils::adjustBundle(
+            mReconstructionCloud,
+            mCameraPoses,
+            mIntrinsics,
+            mImageFeatures);
 }
 
 
@@ -275,8 +286,9 @@ void SfM::addMoreViewsToReconstruction() {
             size_t leftViewIdx  = (goodView < bestView) ? goodView : bestView;
             size_t rightViewIdx = (goodView < bestView) ? bestView : goodView;
 
+
             PointCloud pointCloud;
-            SfMStereoUtilities::triangulateViews(
+            success = SfMStereoUtilities::triangulateViews(
                     mIntrinsics,
                     { leftViewIdx, rightViewIdx },
                     mFeatureMatchMatrix[leftViewIdx][rightViewIdx],
@@ -286,6 +298,13 @@ void SfM::addMoreViewsToReconstruction() {
                     mCameraPoses[rightViewIdx],
                     pointCloud
                     );
+
+            if (success) {
+                cout << "Triangulate " << leftViewIdx << " and " << rightViewIdx << " adding: " << pointCloud.size() << endl;
+                mergeNewPointCloud(pointCloud);
+            } else {
+                cerr << "Failed to triangulate " << leftViewIdx << " and " << rightViewIdx << endl;
+            }
         }
 
         mGoodViews.insert(bestView);
@@ -334,6 +353,7 @@ SfM::Images2D3DMatches SfM::find2D3DMatches() {
                         }
                     }
                     if (matched2DPointInNewView >= 0) {
+                        //This point is matched in the new view
 //                        cout << "found match to new 2d feature " << matched2DPointInNewView << endl;
                         const Features& newViewFeatures = mImageFeatures[viewIdx];
 //                        cout << "leftViewIdx " << leftViewIdx << endl;
@@ -352,6 +372,9 @@ SfM::Images2D3DMatches SfM::find2D3DMatches() {
     }
 
     return matches;
+}
+
+void SfM::mergeNewPointCloud(const PointCloud& cloud) {
 }
 
 } /* namespace sfmtoylib */

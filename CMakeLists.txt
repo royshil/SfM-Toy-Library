@@ -23,13 +23,14 @@
 project(SfMToyExample)
 cmake_minimum_required(VERSION 3.0)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 find_package(OpenCV 3.1 REQUIRED
     COMPONENTS core calib3d features2d imgproc highgui stitching
-    PATHS "/usr/local/Cellar/opencv3/3.1.0_2/share/OpenCV/" NO_DEFAULT_PATH)
+    PATHS "/usr/local/Cellar/opencv3/3.1.0_3/share/OpenCV/" NO_DEFAULT_PATH)
 find_package(OpenGL)
 find_package(Boost COMPONENTS system chrono filesystem REQUIRED)
+find_package(Ceres REQUIRED)
 
 if (NOT APPLE)
     find_package(OpenMP)
@@ -42,12 +43,9 @@ link_directories(${Boost_LIBRARY_DIR})
 
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_subdirectory(SfMToyLib)
+include_directories(${CERES_INCLUDE_DIRS})
 
-############### Find Eigen ###############
-find_package(Eigen3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
-###########################################
+add_subdirectory(SfMToyLib)
 
 SET(USE_GUI TRUE CACHE BOOL "Build with GUI or just CLI")
 
