@@ -82,6 +82,7 @@ int main(int argc, char** argv) {
 	sfm.setImagesDirectory(argv[1]);
 	sfm.runSfM();
 
-	//TODO: save point cloud and cameras to file
+	//save point cloud and cameras to file
+	sfm.saveCloudAndCamerasToFile("output.xyz");
 }
 #endif

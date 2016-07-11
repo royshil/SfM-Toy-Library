@@ -9,6 +9,7 @@
 
 #include "SfM.h"
 #include "SfMStereoUtilities.h"
+#include "SfMBundleAdjustmentUtils.h"
 
 #include <iostream>
 #include <algorithm>
@@ -23,6 +24,9 @@ using namespace std;
 using namespace cv;
 
 namespace sfmtoylib {
+
+const float MERGE_CLOUD_POINT_MIN_MATCH_DISTANCE = 3.0;
+const float MERGE_CLOUD_FEATURE_MIN_MATCH_DISTANCE = 20.0;
 
 SfM::SfM() {
 }
@@ -171,6 +175,7 @@ void SfM::findBaselineTriangulation() {
             continue;
         }
 
+        /*
         Mat outImage;
         drawMatches(mImages[i], prunedLeft.keyPoints,
                 mImages[j], prunedRight.keyPoints,
@@ -178,6 +183,7 @@ void SfM::findBaselineTriangulation() {
                 outImage);
         imshow("outimage", outImage);
         waitKey(0);
+        */
 
         cout << "---- Triangulate from stereo views" << endl;
         success = SfMStereoUtilities::triangulateViews(
@@ -281,11 +287,11 @@ void SfM::addMoreViewsToReconstruction() {
 
         cout << "view " << bestView << endl << newCameraPose << endl;
 
+        bool anyViewSuccess = false;
         for (const int goodView : mGoodViews) {
             //since match matrix is upper-tringular non symmetric - use lower index as left
             size_t leftViewIdx  = (goodView < bestView) ? goodView : bestView;
             size_t rightViewIdx = (goodView < bestView) ? bestView : goodView;
-
 
             PointCloud pointCloud;
             success = SfMStereoUtilities::triangulateViews(
@@ -300,13 +306,20 @@ void SfM::addMoreViewsToReconstruction() {
                     );
 
             if (success) {
-                cout << "Triangulate " << leftViewIdx << " and " << rightViewIdx << " adding: " << pointCloud.size() << endl;
-                mergeNewPointCloud(pointCloud);
+                cout << "Triangulate " << leftViewIdx << " and " << rightViewIdx << " adding: " << pointCloud.size();
+                int newPoints = mergeNewPointCloud(pointCloud);
+                cout << " (new: " << newPoints << ")" << endl;
+
+                anyViewSuccess = true;
             } else {
                 cerr << "Failed to triangulate " << leftViewIdx << " and " << rightViewIdx << endl;
             }
         }
 
+        //Adjust bundle if any additional view was added
+        if (anyViewSuccess) {
+            adjustCurrentBundle();
+        }
         mGoodViews.insert(bestView);
     }
 }
@@ -374,7 +387,73 @@ SfM::Images2D3DMatches SfM::find2D3DMatches() {
     return matches;
 }
 
-void SfM::mergeNewPointCloud(const PointCloud& cloud) {
+int SfM::mergeNewPointCloud(const PointCloud& cloud) {
+    size_t newPoints = 0;
+    for (const Point3DInMap& p : cloud) {
+        const Point3f newPoint = p.p;
+
+        bool foundAnyMatchingExistingViews = false;
+        for (Point3DInMap& existingPoint : mReconstructionCloud) {
+            if (norm(existingPoint.p - newPoint) < MERGE_CLOUD_POINT_MIN_MATCH_DISTANCE) {
+                //This point matched an cloud existing cloud point
+                //Look for common 2D features to confirm match
+
+                for (const auto& kv : p.originatingViews) {
+                    //kv.first = new point's originating view
+                    //kv.second = new point's view 2D feature index
+
+                    for (const auto& existingKv : existingPoint.originatingViews) {
+                        //existingKv.first = existing point's originating view
+                        //existingKv.second = existing point's view 2D feature index
+
+                        bool foundMatchingFeature = false;
+                        int leftViewIdx         = (kv.first < existingKv.first) ? kv.first  : existingKv.first;
+                        int leftViewFeatureIdx  = (kv.first < existingKv.first) ? kv.second : existingKv.second;
+                        int rightViewIdx        = (kv.first < existingKv.first) ? existingKv.first  : kv.first;
+                        int rightViewFeatureIdx = (kv.first < existingKv.first) ? existingKv.second : kv.second;
+
+                        const Matching& matching = mFeatureMatchMatrix[leftViewIdx][rightViewIdx];
+                        for (const DMatch& match : matching) {
+                            if (    match.queryIdx == leftViewFeatureIdx
+                                and match.trainIdx == rightViewFeatureIdx
+                                and match.distance < MERGE_CLOUD_FEATURE_MIN_MATCH_DISTANCE) {
+                                //Found a 2D feature match for the two 3D points - merge
+                                foundMatchingFeature = true;
+                                break;
+                            }
+                        }
+
+                        if (foundMatchingFeature) {
+                            //Add the new originating view, and feature index
+                            existingPoint.originatingViews[kv.first] = kv.second;
+
+                            foundAnyMatchingExistingViews = true;
+                        }
+                    }
+                }
+            }
+            if (foundAnyMatchingExistingViews) {
+                break; //Stop looking for more matching cloud points
+            }
+        }
+
+        if (not foundAnyMatchingExistingViews) {
+            //This point did not match any existing cloud points - add it as new.
+            mReconstructionCloud.push_back(p);
+            newPoints++;
+        }
+    }
+
+    return newPoints;
+}
+
+void SfM::saveCloudAndCamerasToFile(const std::string& filename) {
+    ofstream ofs(filename);
+
+    for (const Point3DInMap& p : mReconstructionCloud) {
+        ofs << p.p.x << " " << p.p.y << " " << p.p.z << endl;
+    }
 }
 
 } /* namespace sfmtoylib */
+

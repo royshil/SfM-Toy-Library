@@ -73,6 +73,8 @@ typedef std::vector<cv::DMatch>      Matching;
 typedef std::vector<Point3DInMap>    PointCloud;
 typedef std::vector<Point3DInMapRGB> PointCloudRGB;
 
+typedef cv::Matx34f Pose;
+
 /**
  * Get the features for left and right images after keeping only the matched features and aligning them.
  * Alignment: i-th feature in left is a match to i-th feature in right.

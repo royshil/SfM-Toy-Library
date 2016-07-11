@@ -26,7 +26,11 @@ enum ErrorCode {
 };
 
 class SfM {
+    /**
+     * This is a matrix of matches from view i to view j
+     */
     typedef std::vector<std::vector<Matching> > MatchMatrix;
+
     typedef std::map<int, Image2D3DMatch> Images2D3DMatches;
 
 public:
@@ -49,6 +53,8 @@ public:
      * @return error code.
      */
     ErrorCode runSfM();
+
+    void saveCloudAndCamerasToFile(const std::string& filename);
 
 private:
     /**
@@ -93,8 +99,9 @@ private:
     /**
      * Merge the given point cloud into the existing reconstruction, by merging 3D points from multiple views.
      * @param cloud to merge
+     * @return number of new points added
      */
-    void mergeNewPointCloud(const PointCloud& cloud);
+    int mergeNewPointCloud(const PointCloud& cloud);
 
     std::vector<std::string>  mImageFilenames;
     std::vector<cv::Mat>      mImages;

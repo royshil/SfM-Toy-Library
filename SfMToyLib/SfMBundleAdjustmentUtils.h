@@ -16,9 +16,16 @@ namespace sfmtoylib {
 
 class SfMBundleAdjustmentUtils {
 public:
+    /**
+     *
+     * @param pointCloud
+     * @param cameraPoses
+     * @param intrinsics
+     * @param image2dFeatures
+     */
     static void adjustBundle(
-            const PointCloud&               pointCloud,
-            const std::vector<cv::Matx34f>& cameraPoses,
+            PointCloud&                     pointCloud,
+            std::vector<cv::Matx34f>&       cameraPoses,
             const Intrinsics&               intrinsics,
             const std::vector<Features>&    image2dFeatures
             );

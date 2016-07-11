@@ -151,6 +151,7 @@ if (USE_GUI)
             ${OPENGL_LIBRARIES}
             ${OpenCV_LIBS}
             ${Boost_LIBRARIES}
+            ${CERES_LIBRARIES}
             )
 else()
     # Command-line app
@@ -161,6 +162,7 @@ else()
     set(SFM_TOY_APP_LIBS    
             ${OpenCV_LIBS}
             ${Boost_LIBRARIES}
+            ${CERES_LIBRARIES}
         )
 endif()
 

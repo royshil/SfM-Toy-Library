@@ -20,6 +20,7 @@ using namespace std;
 namespace sfmtoylib {
 
 const double RANSAC_THRESHOLD = 2.5f; // RANSAC inlier threshold
+const float MIN_REPROJECTION_ERROR = 10.0; // Maximum 10-pixel allowed re-projection error
 
 SfMStereoUtilities::SfMStereoUtilities() {
 
@@ -75,6 +76,9 @@ bool SfMStereoUtilities::findCameraMatricesFromMatch(
 
     Mat E, R, t, mask;
     E = findEssentialMat(alignedLeft.points, alignedRight.points, focal, pp, RANSAC, 0.999, 1.0, mask);
+
+    //Find Pright camera matrix from the essential matrix
+    //Cheirality check (all points are in front of camera) is performed internally.
     recoverPose(E, alignedLeft.points, alignedRight.points, R, t, focal, pp, mask);
 
     //TODO: stratify over Pleft
@@ -125,10 +129,24 @@ bool SfMStereoUtilities::triangulateViews(
     Mat points3d;
     convertPointsFromHomogeneous(points3dHomogeneous.t(), points3d);
 
-    //todo: cheirality check (all points z > 0)
+    Mat rvec;
+    Rodrigues(Pleft.get_minor<3, 3>(0, 0), rvec);
+    Mat projectedOnLeft;
+    projectPoints(points3d, rvec, Pleft.get_minor<3, 1>(0, 3), intrinsics.K, Mat(), projectedOnLeft);
+
+    Rodrigues(Pright.get_minor<3, 3>(0, 0), rvec);
+    Mat projectedOnRight;
+    projectPoints(points3d, rvec, Pright.get_minor<3, 1>(0, 3), intrinsics.K, Mat(), projectedOnRight);
+
+    //Note: cheirality check (all points z > 0) was already performed at camera pose calculation
 
     for (size_t i = 0; i < points3d.rows; i++) {
-        //TODO: check if point reprojection error is small
+        //check if point reprojection error is small enough
+        if (norm(projectedOnLeft.at<Point2f>(i)  - alignedLeft.points[i])  > MIN_REPROJECTION_ERROR or
+            norm(projectedOnRight.at<Point2f>(i) - alignedRight.points[i]) > MIN_REPROJECTION_ERROR)
+        {
+            continue;
+        }
 
         Point3DInMap p;
         p.p = Point3f(points3d.at<float>(i, 0),
