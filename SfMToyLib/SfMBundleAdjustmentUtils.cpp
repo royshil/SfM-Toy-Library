@@ -32,36 +32,29 @@ std::once_flag initLoggingFlag;
 using namespace BundleAdjustUtils;
 
 // Templated pinhole camera model for used with Ceres.  The camera is
-// parameterized using 9 parameters: 3 for rotation, 3 for translation, 1 for
-// focal length and 2 for radial distortion. The principal point is not modeled
-// (i.e. it is assumed be located at the image center).
-struct SnavelyReprojectionError {
-    SnavelyReprojectionError(double observed_x, double observed_y) :
+// parameterized using 7 parameters: 3 for rotation, 3 for translation, 1 for
+// focal length. The principal point is not modeled (assumed be located at the
+// image center, and already subtracted from 'observed').
+struct SimpleReprojectionError {
+    SimpleReprojectionError(double observed_x, double observed_y) :
             observed_x(observed_x), observed_y(observed_y) {
     }
     template<typename T>
     bool operator()(const T* const camera, const T* const point, T* residuals) const {
         T p[3];
-        // camera[0,1,2] are the angle-axis rotation.
+        // Rotate: camera[0,1,2] are the angle-axis rotation.
         ceres::AngleAxisRotatePoint(camera, point, p);
-        // camera[3,4,5] are the translation.
+        // Translate: camera[3,4,5] are the translation.
         p[0] += camera[3];
         p[1] += camera[4];
         p[2] += camera[5];
-        // Compute the center of distortion. The sign change comes from
-        // the camera model that Noah Snavely's Bundler assumes, whereby
-        // the camera coordinate system has a negative z axis.
-        T xp = -p[0] / p[2];
-        T yp = -p[1] / p[2];
-        // Apply second and fourth order radial distortion.
-//        const T& l1 = camera[7];
-//        const T& l2 = camera[8];
-//        T r2 = xp * xp + yp * yp;
-        T distortion = T(1.0); // + r2 * (l1 + l2 * r2);
+        // Perspective divide
+        T xp = p[0] / p[2];
+        T yp = p[1] / p[2];
         // Compute final projected point position.
         const T& focal = camera[6];
-        T predicted_x = focal * distortion * xp;
-        T predicted_y = focal * distortion * yp;
+        T predicted_x = focal * xp;
+        T predicted_y = focal * yp;
         // The error is the difference between the predicted and observed position.
         residuals[0] = predicted_x - T(observed_x);
         residuals[1] = predicted_y - T(observed_y);
@@ -70,8 +63,8 @@ struct SnavelyReprojectionError {
     // Factory to hide the construction of the CostFunction object from
     // the client code.
     static ceres::CostFunction* Create(const double observed_x, const double observed_y) {
-        return (new ceres::AutoDiffCostFunction<SnavelyReprojectionError, 2, 9, 3>(
-                new SnavelyReprojectionError(observed_x, observed_y)));
+        return (new ceres::AutoDiffCostFunction<SimpleReprojectionError, 2, 7, 3>(
+                new SimpleReprojectionError(observed_x, observed_y)));
     }
     double observed_x;
     double observed_y;
@@ -89,8 +82,8 @@ void SfMBundleAdjustmentUtils::adjustBundle(
     // parameters for cameras and points are added automatically.
     ceres::Problem problem;
 
-    //Convert camera pose parameters from [R|t] (3x4) to [Angle-Axis, Translation, focal, distortion] (1x9)
-    typedef cv::Matx<double, 1, 9> CameraVector;
+    //Convert camera pose parameters from [R|t] (3x4) to [Angle-Axis (3), Translation (3), focal (1)] (1x7)
+    typedef cv::Matx<double, 1, 7> CameraVector;
     vector<CameraVector> cameraPoses9d;
     cameraPoses9d.reserve(cameraPoses.size());
     for (size_t i = 0; i < cameraPoses.size(); i++) {
@@ -104,7 +97,7 @@ void SfMBundleAdjustmentUtils::adjustBundle(
         Vec3f t(pose(0, 3), pose(1, 3), pose(2, 3));
         Matx33f R = pose.get_minor<3, 3>(0, 0);
         float angleAxis[3];
-        ceres::RotationMatrixToAngleAxis<float>(R.val, angleAxis);
+        ceres::RotationMatrixToAngleAxis<float>(R.t().val, angleAxis); //Ceres assumes col-major...
 
         cameraPoses9d.push_back(CameraVector(
                 angleAxis[0],
@@ -113,7 +106,7 @@ void SfMBundleAdjustmentUtils::adjustBundle(
                 t(0),
                 t(1),
                 t(2),
-                intrinsics.K.at<float>(0, 0), 0, 0));
+                intrinsics.K.at<float>(0, 0)));
     }
 
     vector<cv::Vec3d> points3d(pointCloud.size());
@@ -125,12 +118,16 @@ void SfMBundleAdjustmentUtils::adjustBundle(
         for (const auto& kv : p.originatingViews) {
             //kv.first  = camera index
             //kv.second = 2d feature index
-            const Point2f p2d = image2dFeatures[kv.first].points[kv.second];
+            Point2f p2d = image2dFeatures[kv.first].points[kv.second];
+
+            //subtract center of projection, since the optimizer doesn't know what it is
+            p2d.x -= intrinsics.K.at<float>(0, 2);
+            p2d.y -= intrinsics.K.at<float>(1, 2);
 
             // Each Residual block takes a point and a camera as input and outputs a 2
             // dimensional residual. Internally, the cost function stores the observed
             // image location and compares the reprojection against the observation.
-            ceres::CostFunction* cost_function = SnavelyReprojectionError::Create(p2d.x, p2d.y);
+            ceres::CostFunction* cost_function = SimpleReprojectionError::Create(p2d.x, p2d.y);
 
             problem.AddResidualBlock(cost_function,
                     NULL /* squared loss */,
@@ -145,7 +142,7 @@ void SfMBundleAdjustmentUtils::adjustBundle(
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.minimizer_progress_to_stdout = true;
-    options.max_num_iterations = 50;
+    options.max_num_iterations = 500;
     options.eta = 1e-2;
     options.max_solver_time_in_seconds = 10;
     options.logging_type = ceres::LoggingType::SILENT;

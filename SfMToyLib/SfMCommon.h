@@ -11,6 +11,7 @@
 #define SFMTOYLIB_SFMCOMMON_H_
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
 
 #include <map>
 
@@ -53,14 +54,10 @@ struct Features {
 };
 
 struct Point3DInMap {
-    /**
-     * 3D point.
-     */
+    // 3D point.
     cv::Point3f p;
 
-    /**
-     * A mapping from image index to 2D point index in that image's list of features.
-     */
+    // A mapping from image index to 2D point index in that image's list of features.
     std::map<int, int> originatingViews;
 };
 

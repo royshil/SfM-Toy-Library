@@ -165,9 +165,9 @@ bool SfMStereoUtilities::triangulateViews(
 }
 
 bool SfMStereoUtilities::findCameraPoseFrom2D3DMatch(
-        const Intrinsics& intrinsics,
+        const Intrinsics&     intrinsics,
         const Image2D3DMatch& match,
-        cv::Matx34f& cameraPose) {
+        cv::Matx34f&          cameraPose) {
 
     //Recover camera pose using 2D-3D correspondence
     Mat rvec, tvec;

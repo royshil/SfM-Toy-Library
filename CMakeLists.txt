@@ -25,12 +25,11 @@ cmake_minimum_required(VERSION 3.0)
 
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-find_package(OpenCV 3.1 REQUIRED
-    COMPONENTS core calib3d features2d imgproc highgui stitching
-    PATHS "/usr/local/Cellar/opencv3/3.1.0_3/share/OpenCV/" NO_DEFAULT_PATH)
+find_package(OpenCV 3.1 REQUIRED COMPONENTS core calib3d features2d imgproc highgui stitching
+                        PATHS "/usr/local/Cellar/opencv3/3.1.0_3/share/OpenCV/" NO_DEFAULT_PATH)
+find_package(Boost      REQUIRED COMPONENTS system chrono filesystem unit_test_framework)
+find_package(Ceres      REQUIRED)
 find_package(OpenGL)
-find_package(Boost COMPONENTS system chrono filesystem REQUIRED)
-find_package(Ceres REQUIRED)
 
 if (NOT APPLE)
     find_package(OpenMP)
@@ -39,10 +38,8 @@ else()
 endif()
 
 include_directories(${Boost_INCLUDE_DIR})
-link_directories(${Boost_LIBRARY_DIR})
-
+link_directories   (${Boost_LIBRARY_DIR})
 include_directories(${OpenCV_INCLUDE_DIRS})
-
 include_directories(${CERES_INCLUDE_DIRS})
 
 add_subdirectory(SfMToyLib)
@@ -63,11 +60,11 @@ IF(USE_QT)
         set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} /usr/local/opt/qt5/lib/cmake/)
     ENDIF()
 	
-	find_package(Qt5Core REQUIRED)
-    find_package(Qt5Gui REQUIRED)
+	find_package(Qt5Core    REQUIRED)
+    find_package(Qt5Gui     REQUIRED)
     find_package(Qt5Widgets REQUIRED)
-    find_package(Qt5OpenGL REQUIRED)
-    find_package(Qt5Xml REQUIRED)
+    find_package(Qt5OpenGL  REQUIRED)
+    find_package(Qt5Xml     REQUIRED)
 	
     # Find includes in corresponding build directories
     set(CMAKE_INCLUDE_CURRENT_DIR ON)

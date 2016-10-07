@@ -395,7 +395,7 @@ int SfM::mergeNewPointCloud(const PointCloud& cloud) {
         bool foundAnyMatchingExistingViews = false;
         for (Point3DInMap& existingPoint : mReconstructionCloud) {
             if (norm(existingPoint.p - newPoint) < MERGE_CLOUD_POINT_MIN_MATCH_DISTANCE) {
-                //This point matched an cloud existing cloud point
+                //This point matched an existing cloud point
                 //Look for common 2D features to confirm match
 
                 for (const auto& kv : p.originatingViews) {
