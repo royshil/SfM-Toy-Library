@@ -54,7 +54,7 @@ public:
      */
     ErrorCode runSfM();
 
-    void saveCloudAndCamerasToFile(const std::string& filename);
+    void saveCloudAndCamerasToPLY(const std::string& filename);
 
 private:
     /**

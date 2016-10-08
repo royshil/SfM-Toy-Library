@@ -34,7 +34,7 @@ using namespace BundleAdjustUtils;
 // Templated pinhole camera model for used with Ceres.  The camera is
 // parameterized using 7 parameters: 3 for rotation, 3 for translation, 1 for
 // focal length. The principal point is not modeled (assumed be located at the
-// image center, and already subtracted from 'observed').
+// image center, and already subtracted from 'observed'), and focal_x = focal_y.
 struct SimpleReprojectionError {
     SimpleReprojectionError(double observed_x, double observed_y) :
             observed_x(observed_x), observed_y(observed_y) {
@@ -44,17 +44,21 @@ struct SimpleReprojectionError {
         T p[3];
         // Rotate: camera[0,1,2] are the angle-axis rotation.
         ceres::AngleAxisRotatePoint(camera, point, p);
+
         // Translate: camera[3,4,5] are the translation.
         p[0] += camera[3];
         p[1] += camera[4];
         p[2] += camera[5];
+
         // Perspective divide
-        T xp = p[0] / p[2];
-        T yp = p[1] / p[2];
+        const T xp = p[0] / p[2];
+        const T yp = p[1] / p[2];
+
         // Compute final projected point position.
         const T& focal = camera[6];
-        T predicted_x = focal * xp;
-        T predicted_y = focal * yp;
+        const T predicted_x = focal * xp;
+        const T predicted_y = focal * yp;
+
         // The error is the difference between the predicted and observed position.
         residuals[0] = predicted_x - T(observed_x);
         residuals[1] = predicted_y - T(observed_y);
@@ -148,11 +152,13 @@ void SfMBundleAdjustmentUtils::adjustBundle(
     options.logging_type = ceres::LoggingType::SILENT;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
-    std::cout << summary.FullReport() << "\n";
+    std::cout << summary.BriefReport() << "\n";
 
     //Implement the optimized camera poses and 3D points back into the reconstruction
     for (size_t i = 0; i < cameraPoses.size(); i++) {
-        if (cameraPoses[i](0, 0) == 0 and cameraPoses[i](1, 1) == 0 and cameraPoses[i](2, 2) == 0) {
+    	Pose& pose = cameraPoses[i];
+
+        if (pose(0, 0) == 0 and pose(1, 1) == 0 and pose(2, 2) == 0) {
             //This camera pose is empty, it was not used in the optimization
             continue;
         }
@@ -163,21 +169,20 @@ void SfMBundleAdjustmentUtils::adjustBundle(
 
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 3; c++) {
-                cameraPoses[i].val[r * 4 + c] = rotationMat[r * 3 + c];
+                pose(r, c) = rotationMat[r * 3 + c];
             }
         }
+
         //Translation
-        cameraPoses[i].val[0 * 3 + 3] = cameraPoses9d[i](3);
-        cameraPoses[i].val[1 * 3 + 3] = cameraPoses9d[i](4);
-        cameraPoses[i].val[2 * 3 + 3] = cameraPoses9d[i](5);
+        pose(0, 3) = cameraPoses9d[i](3);
+        pose(1, 3) = cameraPoses9d[i](4);
+        pose(2, 3) = cameraPoses9d[i](5);
     }
 
     for (int i = 0; i < pointCloud.size(); i++) {
-//        cout << "pt " << i << " before: " << pointCloud[i].p << endl;
         pointCloud[i].p.x = points3d[i](0);
         pointCloud[i].p.y = points3d[i](1);
         pointCloud[i].p.z = points3d[i](2);
-//        cout << "pt " << i << " after: " << pointCloud[i].p << endl;
     }
 }
 

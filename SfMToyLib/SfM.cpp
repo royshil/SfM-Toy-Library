@@ -16,6 +16,7 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -171,21 +172,22 @@ void SfM::findBaselineTriangulation() {
         cout << "pose inliers ratio " << poseInliersRatio << endl;
 
         if (poseInliersRatio < POSE_INLIERS_MINIMAL_RATIO) {
-            cerr << "insufficient pose inliers." << endl;
+            cout << "insufficient pose inliers. skip." << endl;
             continue;
         }
 
-        /*
+/*
         Mat outImage;
         drawMatches(mImages[i], prunedLeft.keyPoints,
                 mImages[j], prunedRight.keyPoints,
                 GetAlignedMatching(prunedLeft.keyPoints.size()),
                 outImage);
+        resize(outImage, outImage, Size(), 0.5, 0.5);
         imshow("outimage", outImage);
         waitKey(0);
-        */
+*/
 
-        cout << "---- Triangulate from stereo views" << endl;
+        cout << "---- Triangulate from stereo views: " << imagePair.second << endl;
         success = SfMStereoUtilities::triangulateViews(
                 mIntrinsics,
                 imagePair.second,
@@ -257,18 +259,19 @@ void SfM::addMoreViewsToReconstruction() {
     cout << "----------------- Add More Views ------------------" << endl;
 
     while (mDoneViews.size() != mImages.size()) {
-        //Find the best view to add according to the largest number of 2D-3D corresponding points
+        //Find the best view to add, according to the largest number of 2D-3D corresponding points
         Images2D3DMatches matches2D3D = find2D3DMatches();
 
         size_t bestView;
         size_t bestNumMatches = 0;
         for (const auto& match2D3D : matches2D3D) {
-            if (match2D3D.second.points2D.size() > bestNumMatches) {
+			const size_t numMatches = match2D3D.second.points2D.size();
+			if (numMatches > bestNumMatches) {
                 bestView       = match2D3D.first;
-                bestNumMatches = match2D3D.second.points2D.size();
+                bestNumMatches = numMatches;
             }
         }
-        cout << "Best view " << bestView << " has " << matches2D3D[bestView].points2D.size() << " matches" << endl;
+        cout << "Best view " << bestView << " has " << bestNumMatches << " matches" << endl;
 
         mDoneViews.insert(bestView);
 
@@ -447,11 +450,35 @@ int SfM::mergeNewPointCloud(const PointCloud& cloud) {
     return newPoints;
 }
 
-void SfM::saveCloudAndCamerasToFile(const std::string& filename) {
+void SfM::saveCloudAndCamerasToPLY(const std::string& filename) {
     ofstream ofs(filename);
 
+    //write PLY header
+    ofs << "ply                 " << endl <<
+           "format ascii 1.0    " << endl <<
+           "element vertex " << mReconstructionCloud.size() << endl <<
+           "property float x    " << endl <<
+           "property float y    " << endl <<
+           "property float z    " << endl <<
+           "property uchar red  " << endl <<
+           "property uchar green" << endl <<
+           "property uchar blue " << endl <<
+           "end_header          " << endl;
+
     for (const Point3DInMap& p : mReconstructionCloud) {
-        ofs << p.p.x << " " << p.p.y << " " << p.p.z << endl;
+    	//get color from first originating view
+		auto originatingView = p.originatingViews.begin();
+		const int viewIdx = originatingView->first;
+		Point2f p2d = mImageFeatures[viewIdx].points[originatingView->second];
+		Vec3b pointColor = mImages[viewIdx].at<Vec3b>(p2d);
+
+		//write vertex
+        ofs << p.p.x              << " " <<
+        	   p.p.y              << " " <<
+			   p.p.z              << " " <<
+			   (int)pointColor(2) << " " <<
+			   (int)pointColor(1) << " " <<
+			   (int)pointColor(0) << " " << endl;
     }
 }
 

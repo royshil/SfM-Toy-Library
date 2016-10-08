@@ -18,7 +18,7 @@ const double NN_MATCH_RATIO = 0.8f; // Nearest-neighbour matching ratio
 
 SfM2DFeatureUtilities::SfM2DFeatureUtilities() {
     // initialize detector and extractor
-    mDetector = ORB::create(2000);
+    mDetector = ORB::create(5000);
     mMatcher = DescriptorMatcher::create("BruteForce-Hamming");
 }
 

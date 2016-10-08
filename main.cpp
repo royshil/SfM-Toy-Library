@@ -83,6 +83,6 @@ int main(int argc, char** argv) {
 	sfm.runSfM();
 
 	//save point cloud and cameras to file
-	sfm.saveCloudAndCamerasToFile("output.xyz");
+	sfm.saveCloudAndCamerasToPLY("output.ply");
 }
 #endif

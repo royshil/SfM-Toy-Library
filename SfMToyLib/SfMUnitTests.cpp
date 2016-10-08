@@ -26,6 +26,11 @@ using namespace std;
 
 BOOST_AUTO_TEST_SUITE( SfMUnitTests )
 
+/**
+ * This unit test checks if the OpenCV reprojection of 3D points to 2D is similar to that
+ * which happens in the Ceres reprojection error function for optimizaion. If it succeeds
+ * we can be sure Ceres is optimizing over the right residuals.
+ */
 BOOST_AUTO_TEST_CASE( ceres_reprojection_test )
 {
 	//simple 640x480 camera intrinsics
@@ -44,6 +49,7 @@ BOOST_AUTO_TEST_CASE( ceres_reprojection_test )
 	cv::Vec3f rotationVector;
 	cv::Rodrigues(rotationMatrix, rotationVector);
 
+	//some random 3D points
 	const vector<cv::Point3f> points3d {
 		{ 4, 12, 50},
 		{12, 11, 55},
@@ -54,6 +60,7 @@ BOOST_AUTO_TEST_CASE( ceres_reprojection_test )
 	cout << rotationMatrix << endl;
 	cout << rotationVector << endl;
 
+	//project using OpenCV
 	vector<cv::Point2f> imagePoints(points3d.size());
 	cv::projectPoints(points3d, rotationVector, translation, K, cv::Mat(), imagePoints);
 	cout << imagePoints << endl;
@@ -61,6 +68,7 @@ BOOST_AUTO_TEST_CASE( ceres_reprojection_test )
     float angleAxis[3];
     ceres::RotationMatrixToAngleAxis<float>(rotationMatrix.t().val, angleAxis); //assumes col-major!
 
+    //project using Ceres-manual and check vs. OpenCV
     for (size_t i = 0; i < points3d.size(); i++) {
     	const cv::Point3f& p3d = points3d[i];
 
