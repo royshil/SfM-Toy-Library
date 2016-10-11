@@ -129,12 +129,61 @@ void KeyPointsToPoints(const Keypoints& kps, Points2f& ps);
 void PointsToKeyPoints(const Points2f& ps, Keypoints& kps);
 
 /**
+ * Convert Points2f to Keypoints.
+ * Note: distance on Keypoint will be set to 1.0.
+ * @param ps points
+ * @return keypoints
+ */
+Keypoints PointsToKeyPoints(const Points2f& ps);
+
+/**
  * Prune the features according to a binary mask (> 0).
  * @param features       features to prune
  * @param mask           mask to prune by
  * @param prunedFeatures pruned features
  */
 void PruneFeaturesWithMask(const Features& features, const cv::Mat& mask, Features& prunedFeatures);
+
+/**
+ * `cv::imshow` version with image scaling (`cv::resize`)
+ * @param windowName window name
+ * @param image		 image to show
+ * @param scale		 scale to use in `cv::resize`
+ */
+void imshow(const std::string& windowName, const cv::Mat& image, const double scale);
+
+namespace Colors {
+    const cv::Scalar BLUE   = cv::Scalar(255,   0,   0);
+    const cv::Scalar AQUA   = cv::Scalar(255, 128,   0);
+    const cv::Scalar CYAN   = cv::Scalar(255, 255,   0);
+    const cv::Scalar MARINE = cv::Scalar(128, 255,   0);
+    const cv::Scalar GREEN  = cv::Scalar(  0, 255,   0);
+    const cv::Scalar LIME   = cv::Scalar(  0, 255, 128);
+    const cv::Scalar YELLOW = cv::Scalar(  0, 255, 255);
+    const cv::Scalar ORANGE = cv::Scalar(  0, 128, 255);
+    const cv::Scalar RED    = cv::Scalar(  0,   0, 255);
+    const cv::Scalar BEIGE  = cv::Scalar(128,   0, 255);
+    const cv::Scalar PURPLE = cv::Scalar(255,   0, 255);
+    const cv::Scalar DEEP   = cv::Scalar(255,   0, 128);
+    const cv::Scalar WHITE  = cv::Scalar::all(255);
+    const cv::Scalar BLACK  = cv::Scalar::all(0);
+
+    const std::vector<cv::Scalar> WHEEL = {
+            BLUE  ,
+            AQUA  ,
+            CYAN  ,
+            MARINE,
+            GREEN ,
+            LIME  ,
+            YELLOW,
+            ORANGE,
+            RED   ,
+            BEIGE ,
+            PURPLE,
+            DEEP  ,
+            BLACK
+    };
+}
 
 }  // namespace sfmtoylib
 

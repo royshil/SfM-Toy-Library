@@ -37,8 +37,7 @@ public:
      * @param featureMatching Matching between left and right features
      * @param featuresLeft    Features in left image
      * @param featuresRight   Features in right image
-     * @param prunedLeft      Output: left features after pruning using Fundamental matrix
-     * @param prunedRight     Output: right features after pruning using Fundamental matrix
+     * @param prunedMatches   Output: matching after pruning using essential matrix
      * @param Pleft           Output: left image matrix (3x4)
      * @param Pright          Output: right image matrix (3x4)
      * @return true on success.
@@ -48,8 +47,7 @@ public:
             const Matching&   featureMatching,
             const Features&   featuresLeft,
             const Features&   featuresRight,
-            Features&         prunedLeft,
-            Features&         prunedRight,
+			Matching&         prunedMatches,
             cv::Matx34f&      Pleft,
             cv::Matx34f&      Pright);
 

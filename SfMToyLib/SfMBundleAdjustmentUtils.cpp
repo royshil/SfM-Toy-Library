@@ -40,7 +40,10 @@ struct SimpleReprojectionError {
             observed_x(observed_x), observed_y(observed_y) {
     }
     template<typename T>
-    bool operator()(const T* const camera, const T* const point, T* residuals) const {
+    bool operator()(const T* const camera,
+    				const T* const point,
+					const T* const focal,
+						  T* residuals) const {
         T p[3];
         // Rotate: camera[0,1,2] are the angle-axis rotation.
         ceres::AngleAxisRotatePoint(camera, point, p);
@@ -55,9 +58,8 @@ struct SimpleReprojectionError {
         const T yp = p[1] / p[2];
 
         // Compute final projected point position.
-        const T& focal = camera[6];
-        const T predicted_x = focal * xp;
-        const T predicted_y = focal * yp;
+        const T predicted_x = *focal * xp;
+        const T predicted_y = *focal * yp;
 
         // The error is the difference between the predicted and observed position.
         residuals[0] = predicted_x - T(observed_x);
@@ -67,7 +69,7 @@ struct SimpleReprojectionError {
     // Factory to hide the construction of the CostFunction object from
     // the client code.
     static ceres::CostFunction* Create(const double observed_x, const double observed_y) {
-        return (new ceres::AutoDiffCostFunction<SimpleReprojectionError, 2, 7, 3>(
+        return (new ceres::AutoDiffCostFunction<SimpleReprojectionError, 2, 6, 3, 1>(
                 new SimpleReprojectionError(observed_x, observed_y)));
     }
     double observed_x;
@@ -77,7 +79,7 @@ struct SimpleReprojectionError {
 void SfMBundleAdjustmentUtils::adjustBundle(
         PointCloud&                  pointCloud,
         std::vector<Pose>&           cameraPoses,
-        const Intrinsics&            intrinsics,
+        Intrinsics&                  intrinsics,
         const std::vector<Features>& image2dFeatures) {
 
     std::call_once(initLoggingFlag, initLogging);
@@ -87,15 +89,15 @@ void SfMBundleAdjustmentUtils::adjustBundle(
     ceres::Problem problem;
 
     //Convert camera pose parameters from [R|t] (3x4) to [Angle-Axis (3), Translation (3), focal (1)] (1x7)
-    typedef cv::Matx<double, 1, 7> CameraVector;
-    vector<CameraVector> cameraPoses9d;
-    cameraPoses9d.reserve(cameraPoses.size());
+    typedef cv::Matx<double, 1, 6> CameraVector;
+    vector<CameraVector> cameraPoses6d;
+    cameraPoses6d.reserve(cameraPoses.size());
     for (size_t i = 0; i < cameraPoses.size(); i++) {
         const Pose& pose = cameraPoses[i];
 
         if (pose(0, 0) == 0 and pose(1, 1) == 0 and pose(2, 2) == 0) {
             //This camera pose is empty, it should not be used in the optimization
-            cameraPoses9d.push_back(CameraVector());
+            cameraPoses6d.push_back(CameraVector());
             continue;
         }
         Vec3f t(pose(0, 3), pose(1, 3), pose(2, 3));
@@ -103,15 +105,17 @@ void SfMBundleAdjustmentUtils::adjustBundle(
         float angleAxis[3];
         ceres::RotationMatrixToAngleAxis<float>(R.t().val, angleAxis); //Ceres assumes col-major...
 
-        cameraPoses9d.push_back(CameraVector(
+        cameraPoses6d.push_back(CameraVector(
                 angleAxis[0],
                 angleAxis[1],
                 angleAxis[2],
                 t(0),
                 t(1),
-                t(2),
-                intrinsics.K.at<float>(0, 0)));
+                t(2)));
     }
+
+    //focal-length factor for optimization
+    double focal = intrinsics.K.at<float>(0, 0);
 
     vector<cv::Vec3d> points3d(pointCloud.size());
 
@@ -135,8 +139,9 @@ void SfMBundleAdjustmentUtils::adjustBundle(
 
             problem.AddResidualBlock(cost_function,
                     NULL /* squared loss */,
-                    cameraPoses9d[kv.first].val,
-                    points3d[i].val);
+                    cameraPoses6d[kv.first].val,
+                    points3d[i].val,
+					&focal);
         }
     }
 
@@ -154,9 +159,19 @@ void SfMBundleAdjustmentUtils::adjustBundle(
     ceres::Solve(options, &problem, &summary);
     std::cout << summary.BriefReport() << "\n";
 
+    if (not summary.termination_type == ceres::CONVERGENCE) {
+        cerr << "Bundle adjustment failed." << endl;
+        return;
+    }
+
+    //update optimized focal
+    intrinsics.K.at<float>(0, 0) = focal;
+    intrinsics.K.at<float>(1, 1) = focal;
+
     //Implement the optimized camera poses and 3D points back into the reconstruction
     for (size_t i = 0; i < cameraPoses.size(); i++) {
     	Pose& pose = cameraPoses[i];
+    	Pose poseBefore = pose;
 
         if (pose(0, 0) == 0 and pose(1, 1) == 0 and pose(2, 2) == 0) {
             //This camera pose is empty, it was not used in the optimization
@@ -165,18 +180,20 @@ void SfMBundleAdjustmentUtils::adjustBundle(
 
         //Convert optimized Angle-Axis back to rotation matrix
         double rotationMat[9] = { 0 };
-        ceres::AngleAxisToRotationMatrix(cameraPoses9d[i].val, rotationMat);
+        ceres::AngleAxisToRotationMatrix(cameraPoses6d[i].val, rotationMat);
 
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 3; c++) {
-                pose(r, c) = rotationMat[r * 3 + c];
+                pose(c, r) = rotationMat[r * 3 + c]; //`rotationMat` is col-major...
             }
         }
 
         //Translation
-        pose(0, 3) = cameraPoses9d[i](3);
-        pose(1, 3) = cameraPoses9d[i](4);
-        pose(2, 3) = cameraPoses9d[i](5);
+        pose(0, 3) = cameraPoses6d[i](3);
+        pose(1, 3) = cameraPoses6d[i](4);
+        pose(2, 3) = cameraPoses6d[i](5);
+
+//        cout << "pose " << i << endl << " before " << endl << poseBefore << endl << " after " << endl << pose << endl;
     }
 
     for (int i = 0; i < pointCloud.size(); i++) {

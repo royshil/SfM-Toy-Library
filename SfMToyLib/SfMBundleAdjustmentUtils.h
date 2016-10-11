@@ -26,7 +26,7 @@ public:
     static void adjustBundle(
             PointCloud&                     pointCloud,
             std::vector<cv::Matx34f>&       cameraPoses,
-            const Intrinsics&               intrinsics,
+            Intrinsics&                     intrinsics,
             const std::vector<Features>&    image2dFeatures
             );
 };

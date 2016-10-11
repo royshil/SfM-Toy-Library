@@ -13,13 +13,14 @@
 
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 using namespace cv;
 using namespace std;
 
 namespace sfmtoylib {
 
-const double RANSAC_THRESHOLD = 2.5f; // RANSAC inlier threshold
+const double RANSAC_THRESHOLD = 10.0f; // RANSAC inlier threshold
 const float MIN_REPROJECTION_ERROR = 10.0; // Maximum 10-pixel allowed re-projection error
 
 SfMStereoUtilities::SfMStereoUtilities() {
@@ -57,8 +58,7 @@ bool SfMStereoUtilities::findCameraMatricesFromMatch(
         const Matching&     matches,
         const Features&     featuresLeft,
         const Features&     featuresRight,
-        Features&           prunedLeft,
-        Features&           prunedRight,
+		Matching&     		prunedMatches,
         cv::Matx34f&        Pleft,
         cv::Matx34f&        Pright) {
 
@@ -74,7 +74,8 @@ bool SfMStereoUtilities::findCameraMatricesFromMatch(
     Features alignedRight;
     GetAlignedPointsFromMatch(featuresLeft, featuresRight, matches, alignedLeft, alignedRight);
 
-    Mat E, R, t, mask;
+    Mat E, R, t;
+    Mat mask;
     E = findEssentialMat(alignedLeft.points, alignedRight.points, focal, pp, RANSAC, 0.999, 1.0, mask);
 
     //Find Pright camera matrix from the essential matrix
@@ -87,9 +88,13 @@ bool SfMStereoUtilities::findCameraMatricesFromMatch(
                      R.at<double>(1,0), R.at<double>(1,1), R.at<double>(1,2), t.at<double>(1),
                      R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2), t.at<double>(2));
 
-    //populate pruned points
-    PruneFeaturesWithMask(alignedLeft,  mask, prunedLeft);
-    PruneFeaturesWithMask(alignedRight, mask, prunedRight);
+    //populate pruned matches
+    prunedMatches.clear();
+    for (size_t i = 0; i < mask.rows; i++) {
+    	if (mask.at<uchar>(i)) {
+    		prunedMatches.push_back(matches[i]);
+    	}
+    }
 
     return true;
 }
@@ -129,21 +134,39 @@ bool SfMStereoUtilities::triangulateViews(
     Mat points3d;
     convertPointsFromHomogeneous(points3dHomogeneous.t(), points3d);
 
-    Mat rvec;
-    Rodrigues(Pleft.get_minor<3, 3>(0, 0), rvec);
-    Mat projectedOnLeft;
-    projectPoints(points3d, rvec, Pleft.get_minor<3, 1>(0, 3), intrinsics.K, Mat(), projectedOnLeft);
+    Mat rvecLeft;
+    Rodrigues(Pleft.get_minor<3, 3>(0, 0), rvecLeft);
+    Mat tvecLeft(Pleft.get_minor<3, 1>(0, 3).t());
 
-    Rodrigues(Pright.get_minor<3, 3>(0, 0), rvec);
-    Mat projectedOnRight;
-    projectPoints(points3d, rvec, Pright.get_minor<3, 1>(0, 3), intrinsics.K, Mat(), projectedOnRight);
+    vector<Point2f> projectedOnLeft(alignedLeft.points.size());
+    projectPoints(points3d, rvecLeft, tvecLeft, intrinsics.K, Mat(), projectedOnLeft);
+
+    Mat rvecRight;
+    Rodrigues(Pright.get_minor<3, 3>(0, 0), rvecRight);
+    Mat tvecRight(Pright.get_minor<3, 1>(0, 3).t());
+
+    vector<Point2f> projectedOnRight(alignedRight.points.size());
+    projectPoints(points3d, rvecRight, tvecRight, intrinsics.K, Mat(), projectedOnRight);
+
+//    {
+//		Mat outLeft(2048, 3072, CV_8UC3, Colors::BLACK);
+//		drawKeypoints(outLeft, alignedLeft.keyPoints, outLeft, Colors::RED);
+//		drawKeypoints(outLeft, PointsToKeyPoints(projectedOnLeft), outLeft, Colors::GREEN);
+//		Mat outRight(2048, 3072, CV_8UC3, Colors::BLACK);
+//		drawKeypoints(outRight, alignedRight.keyPoints, outRight, Colors::RED);
+//		drawKeypoints(outRight, PointsToKeyPoints(projectedOnRight), outRight, Colors::GREEN);
+//		Mat tmp;
+//		hconcat(outLeft, outRight, tmp);
+//		imshow("features", tmp, 0.25);
+//		waitKey(0);
+//    }
 
     //Note: cheirality check (all points z > 0) was already performed at camera pose calculation
 
     for (size_t i = 0; i < points3d.rows; i++) {
         //check if point reprojection error is small enough
-        if (norm(projectedOnLeft.at<Point2f>(i)  - alignedLeft.points[i])  > MIN_REPROJECTION_ERROR or
-            norm(projectedOnRight.at<Point2f>(i) - alignedRight.points[i]) > MIN_REPROJECTION_ERROR)
+        if (norm(projectedOnLeft[i]  - alignedLeft.points[i])  > MIN_REPROJECTION_ERROR or
+            norm(projectedOnRight[i] - alignedRight.points[i]) > MIN_REPROJECTION_ERROR)
         {
             continue;
         }

@@ -9,6 +9,9 @@
 
 #include "SfMCommon.h"
 
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 #include <ostream>
 
 using namespace std;
@@ -72,6 +75,12 @@ void KeyPointsToPoints(const Keypoints& kps, Points2f& ps) {
     }
 }
 
+Keypoints PointsToKeyPoints(const Points2f& ps) {
+	Keypoints kps;
+	PointsToKeyPoints(ps, kps);
+	return kps;
+}
+
 void PointsToKeyPoints(const Points2f& ps, Keypoints& kps) {
     kps.clear();
     for (const auto& p : ps) {
@@ -99,6 +108,12 @@ void PruneFeaturesWithMask(const Features& features, const cv::Mat& mask, Featur
             prunedFeatures.descriptors.push_back(features.descriptors.row(i));
         }
     }
+}
+
+void imshow(const std::string& windowName, const cv::Mat& image, const double scale) {
+	Mat tmp;
+	cv::resize(image, tmp, Size(), scale, scale);
+	cv::imshow(windowName, tmp);
 }
 
 }  // namespace sfmtoylib

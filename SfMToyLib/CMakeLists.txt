@@ -19,7 +19,7 @@ add_executable(SfMUnitTests SfMUnitTests.cpp)
 
 # setup Boost unit test framework
 target_include_directories(SfMUnitTests PRIVATE ${Boost_INCLUDE_DIRS})
-target_link_libraries(SfMUnitTests ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${CERES_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(SfMUnitTests SfMToyLibrary ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${CERES_LIBRARIES} ${OpenCV_LIBS})
 
 enable_testing()
 
