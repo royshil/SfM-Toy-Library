@@ -17,6 +17,14 @@
 
 namespace sfmtoylib {
 
+enum DebugLogLevel {
+    LOG_TRACE = 0,
+    LOG_DEBUG,
+    LOG_INFO,
+    LOG_WARN,
+    LOG_ERROR
+};
+
 ///Rotational element in a 3x4 matrix
 const cv::Rect ROT(0, 0, 3, 3);
 

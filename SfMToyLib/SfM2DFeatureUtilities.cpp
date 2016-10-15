@@ -37,7 +37,9 @@ Matching SfM2DFeatureUtilities::matchFeatures(
         const Features& featuresRight) {
     //initial matching between features
     vector<Matching> initialMatching;
-    mMatcher->knnMatch(featuresLeft.descriptors, featuresRight.descriptors, initialMatching, 2);
+
+    auto matcher = DescriptorMatcher::create("BruteForce-Hamming");
+    matcher->knnMatch(featuresLeft.descriptors, featuresRight.descriptors, initialMatching, 2);
 
     //prune the matching using the ratio test
     Matching prunedMatching;

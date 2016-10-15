@@ -27,7 +27,7 @@ cmake_minimum_required(VERSION 3.0)
 
 find_package(OpenCV 3.1 REQUIRED COMPONENTS core calib3d features2d imgproc highgui stitching
                         PATHS "/usr/local/Cellar/opencv3/3.1.0_3/share/OpenCV/" NO_DEFAULT_PATH)
-find_package(Boost      REQUIRED COMPONENTS system chrono filesystem unit_test_framework)
+find_package(Boost      REQUIRED COMPONENTS system chrono filesystem unit_test_framework program_options)
 find_package(Ceres      REQUIRED)
 find_package(OpenGL)
 

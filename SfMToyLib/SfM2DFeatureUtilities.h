@@ -23,7 +23,7 @@ public:
 
     Features extractFeatures(const cv::Mat& image);
 
-    Matching matchFeatures(
+    static Matching matchFeatures(
             const Features& featuresLeft,
             const Features& featuresRight);
 

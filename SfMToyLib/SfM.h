@@ -34,7 +34,7 @@ class SfM {
     typedef std::map<int, Image2D3DMatch> Images2D3DMatches;
 
 public:
-    SfM();
+    SfM(const float downscale = 1.0);
     virtual ~SfM();
 
     /**
@@ -42,7 +42,7 @@ public:
      * Image file with extensions "jpg" and "png" will be used.
      * @return true on success.
      */
-    bool setImagesDirectory(const std::string directoryPath);
+    bool setImagesDirectory(const std::string& directoryPath);
 
     /**
      * This is the main function of this class. Start here.
@@ -55,6 +55,14 @@ public:
     ErrorCode runSfM();
 
     void saveCloudAndCamerasToPLY(const std::string& filename);
+
+    void setConsoleDebugLevel(unsigned int consoleDebugLevel) {
+        mConsoleDebugLevel = MIN(LOG_ERROR, consoleDebugLevel);
+    }
+
+    void setVisualDebugLevel(unsigned int visualDebugLevel) {
+        mVisualDebugLevel = MIN(LOG_ERROR, visualDebugLevel);
+    }
 
 private:
     /**
@@ -101,7 +109,7 @@ private:
      * @param cloud to merge
      * @return number of new points added
      */
-    int mergeNewPointCloud(const PointCloud& cloud);
+    void mergeNewPointCloud(const PointCloud& cloud);
 
     std::vector<std::string>  mImageFilenames;
     std::vector<cv::Mat>      mImages;
@@ -113,6 +121,9 @@ private:
     SfM2DFeatureUtilities     mFeatureUtil;
     Intrinsics                mIntrinsics;
     PointCloud                mReconstructionCloud;
+    unsigned int              mConsoleDebugLevel;
+    unsigned int              mVisualDebugLevel;
+    float                     mDownscaleFactor;
 };
 
 } /* namespace sfmtoylib */

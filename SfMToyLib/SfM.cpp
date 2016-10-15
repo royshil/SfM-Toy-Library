@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <algorithm>
+#include <thread>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -27,10 +28,13 @@ using namespace cv;
 
 namespace sfmtoylib {
 
-const float MERGE_CLOUD_POINT_MIN_MATCH_DISTANCE = 3.0;
+const float MERGE_CLOUD_POINT_MIN_MATCH_DISTANCE = 0.01;
 const float MERGE_CLOUD_FEATURE_MIN_MATCH_DISTANCE = 20.0;
 
-SfM::SfM() {
+SfM::SfM(const float downscale) :
+        mVisualDebugLevel(LOG_INFO),
+        mConsoleDebugLevel(LOG_INFO),
+        mDownscaleFactor(downscale) {
 }
 
 SfM::~SfM() {
@@ -39,7 +43,7 @@ SfM::~SfM() {
 ErrorCode SfM::runSfM() {
     if (mImages.size() <= 0) {
         cerr << "No images to work on." << endl;
-        return ERROR;
+        return ErrorCode::ERROR;
     }
 
     //initialize intrinsics
@@ -63,11 +67,17 @@ ErrorCode SfM::runSfM() {
     //Lastly - add more camera views to the map
     addMoreViewsToReconstruction();
 
+    saveCloudAndCamerasToPLY("output.ply");
+
+    if (mConsoleDebugLevel <= LOG_INFO) {
+        cout << "----------------------- Done -----------------------" << endl;
+    }
+
     return OKAY;
 }
 
 
-bool SfM::setImagesDirectory(const std::string directoryPath) {
+bool SfM::setImagesDirectory(const std::string& directoryPath) {
     using namespace boost::filesystem;
 
     path dirPath(directoryPath);
@@ -85,14 +95,20 @@ bool SfM::setImagesDirectory(const std::string directoryPath) {
     }
 
     if (mImageFilenames.size() <= 0) {
-        cerr << "Unable to find valid files in images directory." << endl;
+        cerr << "Unable to find valid files in images directory (\"" << directoryPath << "\")." << endl;
         return false;
     }
 
-    cout << "Found " << mImageFilenames.size() << " image files in directory." << endl;
+    if (mConsoleDebugLevel <= LOG_DEBUG) {
+        cout << "Found " << mImageFilenames.size() << " image files in directory." << endl;
+    }
 
     for (auto& imageFilename : mImageFilenames) {
         mImages.push_back(imread(imageFilename));
+
+        if (mDownscaleFactor != 1.0) {
+            resize(mImages.back(), mImages.back(), Size(), mDownscaleFactor, mDownscaleFactor);
+        }
 
         if (mImages.back().empty()) {
             cerr << "Unable to read image from file: " << imageFilename << endl;
@@ -105,37 +121,87 @@ bool SfM::setImagesDirectory(const std::string directoryPath) {
 
 
 void SfM::extractFeatures() {
-    cout << "----------------- Extract Features -----------------" << endl;
+    if (mConsoleDebugLevel <= LOG_INFO) {
+        cout << "----------------- Extract Features -----------------" << endl;
+    }
 
     mImageFeatures.resize(mImages.size());
     for (size_t i = 0; i < mImages.size(); i++) {
         mImageFeatures[i] = mFeatureUtil.extractFeatures(mImages[i]);
 
-        cout << "Image " << i << ": " << mImageFeatures[i].keyPoints.size() << " keypoints" << endl;
-    }
-}
-
-
-void SfM::createFeatureMatchMatrix() {
-    cout << "----------- Create Feature Match Matrix ------------" << endl;
-
-    const size_t numImages = mImages.size();
-    mFeatureMatchMatrix.resize(numImages, vector<Matching>(numImages));
-
-    for (size_t i = 0; i < numImages; i++) {
-        for (size_t j = i + 1; j < numImages; j++) {
-            mFeatureMatchMatrix[i][j] = mFeatureUtil.matchFeatures(mImageFeatures[i], mImageFeatures[j]);
-
-            cout << "Match " << i << ", " << j << ": " << mFeatureMatchMatrix[i][j].size() << " matched features" << endl;
+        if (mConsoleDebugLevel <= LOG_DEBUG) {
+            cout << "Image " << i << ": " << mImageFeatures[i].keyPoints.size() << " keypoints" << endl;
         }
     }
 }
 
 
-void SfM::findBaselineTriangulation() {
-    cout << "----------- Find Baseline Triangulation ------------" << endl;
+void SfM::createFeatureMatchMatrix() {
+    if (mConsoleDebugLevel <= LOG_INFO) {
+        cout << "----------- Create Feature Match Matrix ------------" << endl;
+    }
 
-    cout << "--- Sort views by homography inliers" << endl;
+    const size_t numImages = mImages.size();
+    mFeatureMatchMatrix.resize(numImages, vector<Matching>(numImages));
+
+    //prepare image pairs to match concurrently
+    vector<ImagePair> pairs;
+    for (size_t i = 0; i < numImages; i++) {
+        for (size_t j = i + 1; j < numImages; j++) {
+            pairs.push_back({ i, j });
+        }
+    }
+
+    vector<thread> threads;
+
+    //find out how many threads are supported, and how many pairs each thread will work on
+    const int numThreads = std::thread::hardware_concurrency() - 1;
+    const int numPairsForThread = (numThreads > pairs.size()) ? 1 : (int)ceilf((float)(pairs.size()) / numThreads);
+
+    mutex writeMutex;
+
+    if (mConsoleDebugLevel <= LOG_DEBUG) {
+        cout << "Launch " << numThreads << " threads with " << numPairsForThread << " pairs per thread" << endl;
+    }
+
+    //invoke each thread with its pairs to process (if less pairs than threads, invoke only #pairs threads with 1 pair each)
+    for (size_t threadId = 0; threadId < MIN(numThreads, pairs.size()); threadId++) {
+        threads.push_back(thread([&, threadId] {
+            const int startingPair = numPairsForThread * threadId;
+
+            for (int j = 0; j < numPairsForThread; j++) {
+                const int pairId = startingPair + j;
+                if (pairId >= pairs.size()) { //make sure threads don't overflow the pairs
+                    break;
+                }
+                const ImagePair& pair = pairs[pairId];
+
+                mFeatureMatchMatrix[pair.left][pair.right] = SfM2DFeatureUtilities::matchFeatures(mImageFeatures[pair.left], mImageFeatures[pair.right]);
+
+                if (mConsoleDebugLevel <= LOG_DEBUG) {
+                    writeMutex.lock();
+                    cout << "Thread " << threadId << ": Match (pair " << pairId << ") " << pair.left << ", " << pair.right << ": " << mFeatureMatchMatrix[pair.left][pair.right].size() << " matched features" << endl;
+                    writeMutex.unlock();
+                }
+            }
+        }));
+    }
+
+    //wait for threads to complete
+    for (auto& t : threads) {
+        t.join();
+    }
+}
+
+
+void SfM::findBaselineTriangulation() {
+    if (mConsoleDebugLevel <= LOG_INFO) {
+        cout << "----------- Find Baseline Triangulation ------------" << endl;
+    }
+
+    if (mConsoleDebugLevel <= LOG_DEBUG) {
+        cout << "--- Sort views by homography inliers" << endl;
+    }
 
     //maps are sorted, so the best pair is at the beginnning
     map<float, ImagePair> pairsHomographyInliers = sortViewsForBaseline();
@@ -145,53 +211,68 @@ void SfM::findBaselineTriangulation() {
 //    Features prunedLeft, prunedRight;
     PointCloud pointCloud;
 
-    cout << "--- Try views in triangulation" << endl;
+    if (mConsoleDebugLevel <= LOG_DEBUG) {
+        cout << "--- Try views in triangulation" << endl;
+    }
 
     //try to find the best pair, stating at the beginning
     for (auto& imagePair : pairsHomographyInliers) {
-        cout << "Trying " << imagePair.second << " ratio: " << imagePair.first << endl << flush;
+        if (mConsoleDebugLevel <= LOG_DEBUG) {
+            cout << "Trying " << imagePair.second << " ratio: " << imagePair.first << endl << flush;
+        }
         size_t i = imagePair.second.left;
         size_t j = imagePair.second.right;
 
-        cout << "---- Find camera matrices" << endl;
+        if (mConsoleDebugLevel <= LOG_TRACE) {
+            cout << "---- Find camera matrices" << endl;
+        }
         Matching prunedMatching;
         //recover camera matrices (poses) from the point matching
         bool success = SfMStereoUtilities::findCameraMatricesFromMatch(
                 mIntrinsics,
                 mFeatureMatchMatrix[i][j],
-                mImageFeatures[i], mImageFeatures[j],
+                mImageFeatures[i],
+                mImageFeatures[j],
 				prunedMatching,
-                Pleft,             Pright
+                Pleft, Pright
                 );
 
         if (not success) {
-            cerr << "stereo view could not be obtained " << imagePair.second << ", go to next pair" << endl << flush;
+            if (mConsoleDebugLevel <= LOG_WARN) {
+                cerr << "stereo view could not be obtained " << imagePair.second << ", go to next pair" << endl << flush;
+            }
             continue;
         }
 
         float poseInliersRatio = (float)prunedMatching.size() / (float)mFeatureMatchMatrix[i][j].size();
 
-        cout << "pose inliers ratio " << poseInliersRatio << endl;
+        if (mConsoleDebugLevel <= LOG_TRACE) {
+            cout << "pose inliers ratio " << poseInliersRatio << endl;
+        }
 
         if (poseInliersRatio < POSE_INLIERS_MINIMAL_RATIO) {
-            cout << "insufficient pose inliers. skip." << endl;
+            if (mConsoleDebugLevel <= LOG_TRACE) {
+                cout << "insufficient pose inliers. skip." << endl;
+            }
             continue;
         }
 
-/*
-        Mat outImage;
-        drawMatches(mImages[i], prunedLeft.keyPoints,
-                mImages[j], prunedRight.keyPoints,
-                GetAlignedMatching(prunedLeft.keyPoints.size()),
-                outImage);
-        resize(outImage, outImage, Size(), 0.5, 0.5);
-        imshow("outimage", outImage);
-        waitKey(0);
-*/
+        if (mVisualDebugLevel <= LOG_INFO) {
+            Mat outImage;
+            drawMatches(mImages[i], mImageFeatures[i].keyPoints,
+                        mImages[j], mImageFeatures[j].keyPoints,
+                        prunedMatching,
+                        outImage);
+            resize(outImage, outImage, Size(), 0.5, 0.5);
+            imshow("outimage", outImage);
+            waitKey(0);
+        }
 
         mFeatureMatchMatrix[i][j] = prunedMatching;
 
-        cout << "---- Triangulate from stereo views: " << imagePair.second << endl;
+        if (mConsoleDebugLevel <= LOG_DEBUG) {
+            cout << "---- Triangulate from stereo views: " << imagePair.second << endl;
+        }
         success = SfMStereoUtilities::triangulateViews(
                 mIntrinsics,
                 imagePair.second,
@@ -202,7 +283,9 @@ void SfM::findBaselineTriangulation() {
                 );
 
        if (not success) {
-           cerr << "could not triangulate: " << imagePair.second << endl << flush;
+           if (mConsoleDebugLevel <= LOG_WARN) {
+               cerr << "could not triangulate: " << imagePair.second << endl << flush;
+           }
            continue;
        }
 
@@ -231,7 +314,9 @@ void SfM::adjustCurrentBundle() {
 
 
 map<float, ImagePair> SfM::sortViewsForBaseline() {
-    cout << "---------- Find Views Homography Inliers -----------" << endl;
+    if (mConsoleDebugLevel <= LOG_INFO) {
+        cout << "---------- Find Views Homography Inliers -----------" << endl;
+    }
 
     //sort pairwise matches to find the lowest Homography inliers [Snavely07 4.2]
     map<float, ImagePair> matchesSizes;
@@ -252,7 +337,9 @@ map<float, ImagePair> SfM::sortViewsForBaseline() {
             float inliersRatio = (float)numInliers / (float)(mFeatureMatchMatrix[i][j].size());
             matchesSizes[inliersRatio] = {i, j};
 
-            cout << "Homography inliers ratio: " << i << ", " << j << " " << inliersRatio << endl;
+            if (mConsoleDebugLevel <= LOG_DEBUG) {
+                cout << "Homography inliers ratio: " << i << ", " << j << " " << inliersRatio << endl;
+            }
         }
     }
 
@@ -260,7 +347,9 @@ map<float, ImagePair> SfM::sortViewsForBaseline() {
 }
 
 void SfM::addMoreViewsToReconstruction() {
-    cout << "----------------- Add More Views ------------------" << endl;
+    if (mConsoleDebugLevel <= LOG_INFO) {
+        cout << "------------------ Add More Views ------------------" << endl;
+    }
 
     while (mDoneViews.size() != mImages.size()) {
         //Find the best view to add, according to the largest number of 2D-3D corresponding points
@@ -275,9 +364,10 @@ void SfM::addMoreViewsToReconstruction() {
                 bestNumMatches = numMatches;
             }
         }
-        cout << "Best view " << bestView << " has " << bestNumMatches << " matches" << endl;
-        cout << "Adding " << bestView << " to existing " <<
-                boost::algorithm::join(mGoodViews | boost::adaptors::transformed(static_cast<std::string(*)(int)>(std::to_string)), ",") << endl;
+        if (mConsoleDebugLevel <= LOG_DEBUG) {
+            cout << "Best view " << bestView << " has " << bestNumMatches << " matches" << endl;
+            cout << "Adding " << bestView << " to existing " << Mat(vector<int>(mGoodViews.begin(), mGoodViews.end())).t() << endl;
+        }
 
         mDoneViews.insert(bestView);
 
@@ -288,13 +378,17 @@ void SfM::addMoreViewsToReconstruction() {
                 newCameraPose);
 
         if (not success) {
-            cerr << "Cannot recover camera pose for view " << bestView << endl;
+            if (mConsoleDebugLevel <= LOG_WARN) {
+                cerr << "Cannot recover camera pose for view " << bestView << endl;
+            }
             continue;
         }
 
         mCameraPoses[bestView] = newCameraPose;
 
-        cout << "New view " << bestView << " pose " << endl << newCameraPose << endl;
+        if (mConsoleDebugLevel <= LOG_DEBUG) {
+            cout << "New view " << bestView << " pose " << endl << newCameraPose << endl;
+        }
 
         bool anyViewSuccess = false;
         for (const int goodView : mGoodViews) {
@@ -331,13 +425,18 @@ void SfM::addMoreViewsToReconstruction() {
                     );
 
             if (success) {
-                cout << "Triangulate " << leftViewIdx << " and " << rightViewIdx << " (match = " << (mFeatureMatchMatrix[leftViewIdx][rightViewIdx].size()) << ") adding: " << pointCloud.size();
-                int newPoints = mergeNewPointCloud(pointCloud);
-                cout << " (new: " << newPoints << ")" << endl;
+                if (mConsoleDebugLevel <= LOG_DEBUG) {
+                    cout << "Merge triangulation between " << leftViewIdx << " and " << rightViewIdx <<
+                        " (# matching pts = " << (mFeatureMatchMatrix[leftViewIdx][rightViewIdx].size()) << ") ";
+                }
+
+                mergeNewPointCloud(pointCloud);
 
                 anyViewSuccess = true;
             } else {
-                cerr << "Failed to triangulate " << leftViewIdx << " and " << rightViewIdx << endl;
+                if (mConsoleDebugLevel <= LOG_WARN) {
+                    cerr << "Failed to triangulate " << leftViewIdx << " and " << rightViewIdx << endl;
+                }
             }
         }
 
@@ -358,14 +457,10 @@ SfM::Images2D3DMatches SfM::find2D3DMatches() {
             continue; //skip done views
         }
 
-//        cout << "work " << viewIdx << endl;
-
         Image2D3DMatch match2D3D;
 
         //scan all cloud 3D points
         for (const Point3DInMap& cloudPoint : mReconstructionCloud) {
-//            cout << "3d pt " << cloudPoint.p << endl;
-
         	bool found2DPoint = false;
 
             //scan all originating views for that 3D point
@@ -373,8 +468,6 @@ SfM::Images2D3DMatches SfM::find2D3DMatches() {
                 //check for 2D-2D matching via the match matrix
                 const int originatingViewIndex        = origViewAndPoint.first;
                 const int originatingViewFeatureIndex = origViewAndPoint.second;
-
-//                cout << "orig view idx " << originatingViewIndex << " feature idx " << originatingViewFeatureIndex << endl;
 
                 //match matrix is upper-triangular (not symmetric) so the left index must be the smaller one
                 const int leftViewIdx  = (originatingViewIndex < viewIdx) ? originatingViewIndex : viewIdx;
@@ -394,12 +487,7 @@ SfM::Images2D3DMatches SfM::find2D3DMatches() {
                     }
                     if (matched2DPointInNewView >= 0) {
                         //This point is matched in the new view
-//                        cout << "found match to new 2d feature " << matched2DPointInNewView << endl;
                         const Features& newViewFeatures = mImageFeatures[viewIdx];
-//                        cout << "leftViewIdx " << leftViewIdx << endl;
-//                        cout << "rightViewIdx " << rightViewIdx << endl;
-//                        cout << "newViewFeatures " << newViewFeatures.points.size() << endl;
-//                        cout << "found 2d point " << newViewFeatures.points[matched2DPointInNewView] << endl;
                         match2D3D.points2D.push_back(newViewFeatures.points[matched2DPointInNewView]);
                         match2D3D.points3D.push_back(cloudPoint.p);
                         found2DPoint = true;
@@ -419,22 +507,25 @@ SfM::Images2D3DMatches SfM::find2D3DMatches() {
     return matches;
 }
 
-int SfM::mergeNewPointCloud(const PointCloud& cloud) {
+void SfM::mergeNewPointCloud(const PointCloud& cloud) {
     const size_t numImages = mImages.size();
     MatchMatrix mergeMatchMatrix;
     mergeMatchMatrix.resize(numImages, vector<Matching>(numImages));
 
     size_t newPoints = 0;
+    size_t mergedPoints = 0;
+
     for (const Point3DInMap& p : cloud) {
         const Point3f newPoint = p.p;
 
         bool foundAnyMatchingExistingViews = false;
+        bool foundMatching3DPoint = false;
         for (Point3DInMap& existingPoint : mReconstructionCloud) {
-//            if (norm(existingPoint.p - newPoint) < MERGE_CLOUD_POINT_MIN_MATCH_DISTANCE)
-            {
+            if (norm(existingPoint.p - newPoint) < MERGE_CLOUD_POINT_MIN_MATCH_DISTANCE) {
                 //This point matched an existing cloud point
-                //Look for common 2D features to confirm match
+                foundMatching3DPoint = true;
 
+                //Look for common 2D features to confirm match
                 for (const auto& newKv : p.originatingViews) {
                     //kv.first = new point's originating view
                     //kv.second = new point's view 2D feature index
@@ -470,46 +561,57 @@ int SfM::mergeNewPointCloud(const PointCloud& cloud) {
                             existingPoint.originatingViews[newKv.first] = newKv.second;
 
                             foundAnyMatchingExistingViews = true;
+
                         }
                     }
                 }
             }
             if (foundAnyMatchingExistingViews) {
+                mergedPoints++;
                 break; //Stop looking for more matching cloud points
             }
         }
 
-        if (not foundAnyMatchingExistingViews) {
+        if (not foundAnyMatchingExistingViews and not foundMatching3DPoint) {
             //This point did not match any existing cloud points - add it as new.
             mReconstructionCloud.push_back(p);
             newPoints++;
         }
     }
 
-    for (size_t i = 0; i < numImages - 1; i++) {
-        for (size_t j = i; j < numImages; j++) {
-            const Matching& matching = mergeMatchMatrix[i][j];
-            if (matching.empty()) {
-                continue;
+    if (mVisualDebugLevel <= LOG_DEBUG) {
+        for (size_t i = 0; i < numImages - 1; i++) {
+            for (size_t j = i; j < numImages; j++) {
+                const Matching& matching = mergeMatchMatrix[i][j];
+                if (matching.empty()) {
+                    continue;
+                }
+
+                Mat outImage;
+                drawMatches(mImages[i], mImageFeatures[i].keyPoints,
+                            mImages[j], mImageFeatures[j].keyPoints,
+                            matching, outImage);
+                //write the images index...
+                putText(outImage, "Image " + to_string(i), Point (10,                     50), CV_FONT_NORMAL, 3.0, Colors::GREEN, 3);
+                putText(outImage, "Image " + to_string(j), Point (10 + outImage.cols / 2, 50), CV_FONT_NORMAL, 3.0, Colors::GREEN, 3);
+                resize(outImage, outImage, Size(), 0.25, 0.25);
+                imshow("Merge Match", outImage);
+                waitKey(0);
             }
-
-            Mat outImage;
-            drawMatches(mImages[i], mImageFeatures[i].keyPoints,
-                        mImages[j], mImageFeatures[j].keyPoints,
-                        matching, outImage);
-            //TODO: write the images index...
-            resize(outImage, outImage, Size(), 0.25, 0.25);
-            imshow("outimage", outImage);
-            waitKey(0);
-
-            saveCloudAndCamerasToPLY("output.ply");
         }
+        destroyWindow("Merge Match");
     }
 
-    return newPoints;
+    if (mConsoleDebugLevel <= LOG_DEBUG) {
+        cout << " adding: " << cloud.size() << " (new: " << newPoints << ", merged: " << mergedPoints << ")" << endl;
+    }
 }
 
 void SfM::saveCloudAndCamerasToPLY(const std::string& filename) {
+    if (mConsoleDebugLevel <= LOG_INFO) {
+        cout << "Saving result reconstruction to " << filename << endl;
+    }
+
     ofstream ofs(filename);
 
     //write PLY header
