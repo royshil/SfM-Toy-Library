@@ -4,7 +4,8 @@
  *  Created on: May 26, 2016
  *      Author: roy_shilkrot
  * 
- *  Copyright @  2016
+ *  Copyright @ Roy Shilkrot 2016
+ *
  */
 
 #include "SfM.h"
@@ -208,7 +209,6 @@ void SfM::findBaselineTriangulation() {
 
     Matx34f Pleft  = Matx34f::eye();
     Matx34f Pright = Matx34f::eye();
-//    Features prunedLeft, prunedRight;
     PointCloud pointCloud;
 
     if (mConsoleDebugLevel <= LOG_DEBUG) {

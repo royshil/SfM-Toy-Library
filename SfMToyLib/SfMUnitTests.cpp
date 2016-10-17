@@ -4,6 +4,8 @@
  *  Created on: Oct 6, 2016
  *      Author: roy_shilkrot
  *
+ * Copyright @ Roy Shilkrot 2016.
+ *
  * Unit tests for the SfM pipeline.
  *
  */
@@ -23,7 +25,7 @@
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
 
-#define BOOST_TEST_EQUALS(a, b, e) BOOST_TEST((((a) == (b)) || (fabsf((a) - (b)) < e)))
+#define BOOST_TEST_EQUALS(a, b, e) BOOST_TEST((((a) == (b)) || (std::abs((a) - (b)) < e)))
 
 using namespace sfmtoylib;
 using namespace std;
@@ -155,9 +157,11 @@ BOOST_AUTO_TEST_CASE( ceres_reprojection_test )
         p[1] += translation(1);
         p[2] += translation(2);
 
+        //perspective divide
         const float xp = p[0] / p[2];
         const float yp = p[1] / p[2];
 
+        //focal and center of projection
         const cv::Point2f predicted(FOCAL_FACTOR * xp + INTRINSICS(0, 2),
                                     FOCAL_FACTOR * yp + INTRINSICS(1, 2));
 
@@ -171,12 +175,14 @@ BOOST_AUTO_TEST_CASE( ceres_reprojection_test )
  * Test the correctness of `SfMStereoUtilities::findCameraPoseFrom2D3DMatch`
  */
 BOOST_AUTO_TEST_CASE(find_camera_pose_from_2d3d_match) {
+    //generate mock data: a 2D view of the sparse 3D scene
     Points3f points3d;
     Points2f points2d;
     cv::Matx33f rotationMatrix;
     cv::Vec3f translation;
     generate2DPointsFromMockCamera(points3d, points2d, rotationMatrix, translation);
 
+    //recover the pose from 2D-3D correspondence
     Pose recoveredPose;
     SfMStereoUtilities::findCameraPoseFrom2D3DMatch(
             { cv::Mat(INTRINSICS), cv::Mat(INTRINSICS.inv()), cv::Mat()}, //intrinsics
@@ -192,7 +198,11 @@ BOOST_AUTO_TEST_CASE(find_camera_pose_from_2d3d_match) {
     }
 }
 
+/**
+ * Test the correctness of `SfMStereoUtilities::triangulateViews`.
+ */
 BOOST_AUTO_TEST_CASE(triangulate_from_2_views) {
+    //Generate mock data: 2 views of sparse 3D scene
     Points3f points3d;
     Points2f leftImage;
     Points2f rightImage;
@@ -200,13 +210,27 @@ BOOST_AUTO_TEST_CASE(triangulate_from_2_views) {
     cv::Matx34f rightCamera;
     generateStereoViews(points3d, leftImage, rightImage, leftCamera, rightCamera);
 
-//    SfMStereoUtilities::triangulateViews(
-//            { cv::Mat(INTRINSICS), cv::Mat(INTRINSICS.inv()), cv::Mat()}, //intrinsics
-//            { 0, 1 },                                                     //image pair
-//            matching,
-//
-//            );
+    Matching matching = GetAlignedMatching(leftImage.size());
 
+    PointCloud pointCloud;
+
+    //triangulate
+    SfMStereoUtilities::triangulateViews(
+            { cv::Mat(INTRINSICS), cv::Mat(INTRINSICS.inv()), cv::Mat()}, //intrinsics
+            { 0, 1 },                                                     //image pair
+            matching,                                                     //aligned matching
+            { PointsToKeyPoints(leftImage), leftImage, cv::Mat::zeros(leftImage.size(), 1, CV_32FC1) },    //left features
+            { PointsToKeyPoints(rightImage), rightImage, cv::Mat::zeros(rightImage.size(), 1, CV_32FC1) }, //right features
+            leftCamera,                                                   //left camera pose
+            rightCamera,                                                  //right camera pose
+            pointCloud                                                    //output pointcloud
+            );
+
+    //test triangulation result
+    for (size_t i = 0; i < pointCloud.size(); i++) {
+        const Point3DInMap& p = pointCloud[i];
+        BOOST_TEST_EQUALS(norm(p.p - points3d[i]), 0.0, 0.01);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -56,10 +56,10 @@ void GetAlignedPointsFromMatch(const Features& leftFeatures,
     alignedRight.descriptors = cv::Mat();
 
     for (unsigned int i=0; i<matches.size(); i++) {
-        alignedLeft .keyPoints  .push_back(leftFeatures.keyPoints       [matches[i] .queryIdx]);
-        alignedLeft .descriptors.push_back(leftFeatures.descriptors.row (matches[i] .queryIdx));
-        alignedRight.keyPoints  .push_back(rightFeatures.keyPoints      [matches[i] .trainIdx]);
-        alignedRight.descriptors.push_back(rightFeatures.descriptors.row(matches[i] .trainIdx));
+        alignedLeft .keyPoints  .push_back(leftFeatures.keyPoints       [matches[i].queryIdx]);
+        alignedLeft .descriptors.push_back(leftFeatures.descriptors.row (matches[i].queryIdx));
+        alignedRight.keyPoints  .push_back(rightFeatures.keyPoints      [matches[i].trainIdx]);
+        alignedRight.descriptors.push_back(rightFeatures.descriptors.row(matches[i].trainIdx));
         leftBackReference .push_back(matches[i].queryIdx);
         rightBackReference.push_back(matches[i].trainIdx);
     }

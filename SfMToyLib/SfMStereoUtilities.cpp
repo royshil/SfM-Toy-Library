@@ -4,7 +4,7 @@
  *  Created on: May 27, 2016
  *      Author: roy_shilkrot
  * 
- *  Copyright @  2016
+ *  Copyright @ Roy Shilkrot 2016
  */
 
 #include "SfMStereoUtilities.h"
