@@ -371,6 +371,7 @@ void SfM::addMoreViewsToReconstruction() {
 
         mDoneViews.insert(bestView);
 
+        //recover the new view camera pose
         Matx34f newCameraPose;
         bool success = SfMStereoUtilities::findCameraPoseFrom2D3DMatch(
                 mIntrinsics,
@@ -390,6 +391,7 @@ void SfM::addMoreViewsToReconstruction() {
             cout << "New view " << bestView << " pose " << endl << newCameraPose << endl;
         }
 
+        //triangulate more points from new view to all existing good views
         bool anyViewSuccess = false;
         for (const int goodView : mGoodViews) {
             //since match matrix is upper-triangular (non symmetric) - use lower index as left
@@ -430,6 +432,7 @@ void SfM::addMoreViewsToReconstruction() {
                         " (# matching pts = " << (mFeatureMatchMatrix[leftViewIdx][rightViewIdx].size()) << ") ";
                 }
 
+                //add new points to the reconstruction
                 mergeNewPointCloud(pointCloud);
 
                 anyViewSuccess = true;
@@ -516,13 +519,13 @@ void SfM::mergeNewPointCloud(const PointCloud& cloud) {
     size_t mergedPoints = 0;
 
     for (const Point3DInMap& p : cloud) {
-        const Point3f newPoint = p.p;
+        const Point3f newPoint = p.p; //new 3D point
 
         bool foundAnyMatchingExistingViews = false;
         bool foundMatching3DPoint = false;
         for (Point3DInMap& existingPoint : mReconstructionCloud) {
             if (norm(existingPoint.p - newPoint) < MERGE_CLOUD_POINT_MIN_MATCH_DISTANCE) {
-                //This point matched an existing cloud point
+                //This point is very close to an existing 3D cloud point
                 foundMatching3DPoint = true;
 
                 //Look for common 2D features to confirm match
@@ -580,6 +583,7 @@ void SfM::mergeNewPointCloud(const PointCloud& cloud) {
     }
 
     if (mVisualDebugLevel <= LOG_DEBUG) {
+        //debug: show new matching points in the cloud
         for (size_t i = 0; i < numImages - 1; i++) {
             for (size_t j = i; j < numImages; j++) {
                 const Matching& matching = mergeMatchMatrix[i][j];
@@ -612,7 +616,7 @@ void SfM::saveCloudAndCamerasToPLY(const std::string& filename) {
         cout << "Saving result reconstruction to " << filename << endl;
     }
 
-    ofstream ofs(filename);
+    ofstream ofs("points.ply");
 
     //write PLY header
     ofs << "ply                 " << endl <<
@@ -642,7 +646,51 @@ void SfM::saveCloudAndCamerasToPLY(const std::string& filename) {
 			   (int)pointColor(0) << " " << endl;
     }
 
-    //TODO: save cameras polygons..
+    ofs.close();
+
+    ofstream ofsc("cameras.ply");
+
+    //write PLY header
+    ofsc << "ply                 " << endl <<
+           "format ascii 1.0    " << endl <<
+           "element vertex " << (mCameraPoses.size() * 4) << endl <<
+           "property float x    " << endl <<
+           "property float y    " << endl <<
+           "property float z    " << endl <<
+           "element edge " << (mCameraPoses.size() * 3) << endl <<
+           "property int vertex1" << endl <<
+           "property int vertex2" << endl <<
+           "property uchar red  " << endl <<
+           "property uchar green" << endl <<
+           "property uchar blue " << endl <<
+           "end_header          " << endl;
+
+    //save cameras polygons..
+    for (const auto& pose : mCameraPoses) {
+        Point3d c(pose(0, 3), pose(1, 3), pose(2, 3));
+        Point3d cx = c + Point3d(pose(0, 0), pose(1, 0), pose(2, 0)) * 0.2;
+        Point3d cy = c + Point3d(pose(0, 1), pose(1, 1), pose(2, 1)) * 0.2;
+        Point3d cz = c + Point3d(pose(0, 2), pose(1, 2), pose(2, 2)) * 0.2;
+
+        ofsc << c.x  << " " << c.y  << " " << c.z  << endl;
+        ofsc << cx.x << " " << cx.y << " " << cx.z << endl;
+        ofsc << cy.x << " " << cy.y << " " << cy.z << endl;
+        ofsc << cz.x << " " << cz.y << " " << cz.z << endl;
+    }
+
+    const int camVertexStartIndex = mReconstructionCloud.size();
+
+    for (size_t i = 0; i < mCameraPoses.size(); i++) {
+        ofsc << (i * 4 + 0) << " " <<
+                (i * 4 + 1) << " " <<
+                "255 0 0" << endl;
+        ofsc << (i * 4 + 0) << " " <<
+                (i * 4 + 2) << " " <<
+                "0 255 0" << endl;
+        ofsc << (i * 4 + 0) << " " <<
+                (i * 4 + 3) << " " <<
+                "0 0 255" << endl;
+    }
 }
 
 } /* namespace sfmtoylib */

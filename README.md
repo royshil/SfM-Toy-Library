@@ -11,7 +11,7 @@ SfM-Toy-Library is now using OpenCV 3, which introduced many new convenience fun
 
 Ceres solver was chosen to do bundle adjustment, for its simple API, straightforward modeling of the problem and long-term support.
 
-Also added are doxygen-style documentation comments throughout.
+Doxygen-style documentation comments appear throughout.
 
 ## Compile
 
@@ -20,8 +20,7 @@ To compile use CMake: http://www.cmake.org
 ### Prerequisite
 - OpenCV 3.x: http://www.opencv.org
 - Ceres Solver (for bundle adjustment): http://ceres-solver.org/
-- Boost C++ libraries (system, chrono, filesystem) v1.54+: http://www.boost.org/
-- OPTIONAL: Qt 5.x (for the GUI) and libQGLViewer: http://www.libqglviewer.com/ for the 3D visualization of the point cloud
+- Boost C++ libraries v1.54+: http://www.boost.org/
 
 ### How to make
 
@@ -51,11 +50,19 @@ See http://www.morethantechnical.com/2012/02/07/structure-from-motion-and-3d-rec
 
 ### Execute
 
-	USAGE: SfMToyUI.exe <path_to_images> [use rich features (RICH/OF) = RICH] [use GPU (GPU/CPU) = GPU] [down/upscale factor = 1.0]
+    USAGE ./build/SfMToyUI [options] <input-directory>
+      -h [ --help ]                   produce help message
+      -d [ --console-debug ] arg (=2) Debug output to console log level (0 = Trace,
+                                      4 = Error).
+      -v [ --visual-debug ] arg (=3)  Visual debug output to screen log level (0 = 
+                                      All, 4 = None).
+      -s [ --downscale ] arg (=1)     Downscale factor for input images
+      -p [ --input-directory ] arg    Directory to find input images
 
 ### Datasets
 
 Here's a place with some standard datasets for SfM: http://cvlab.epfl.ch/~strecha/multiview/denseMVS.html
+
 Also, you can use the "Crazy Horse" (A national memorial site in South Dakota) dataset, that I pictured myself, included in the repo.
 
 ## References
@@ -65,6 +72,3 @@ Also, you can use the "Crazy Horse" (A national memorial site in South Dakota) d
 3. Triangulation, R.I. Hartley, P. Strum, 1997, Computer vision and image understanding
 4. Recovering baseline and orientation from essential matrix, B.K.P. Horn, 1990, J. Optical Society of America [http://people.csail.mit.edu/bkph/articles/Essential_Old.pdf]
 
-## Troubleshooting
-
-- If you get linker errors "mismatch detected for '_ITERATOR_DEBUG_LEVEL': value '0' doesn't match value '2' in Visualization.obj", you must make sure you are compiling vs. the right VTK static libs (Debug have "-gd" postfix, Release don't).
