@@ -44,9 +44,11 @@ Get Boost and Ceres using homebrew: `brew install boost ceres-solver`
 
 Use Cmake's GUI to create a MSVC solution, and build it.
 
-## Use
+## Usage
 
-See http://www.morethantechnical.com/2012/02/07/structure-from-motion-and-3d-reconstruction-on-the-easy-in-opencv-2-3-w-code/
+See the blog posts:
+- http://www.morethantechnical.com/2012/02/07/structure-from-motion-and-3d-reconstruction-on-the-easy-in-opencv-2-3-w-code/
+- 
 
 ### Execute
 
