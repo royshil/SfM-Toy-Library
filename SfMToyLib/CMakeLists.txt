@@ -1,54 +1,48 @@
-cmake_minimum_required(VERSION 2.6)
+#  The MIT License (MIT)
+# 
+#  Copyright (c) 2016 Roy Shilkrot
+#   
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#   
+#  The above copyright notice and this permission notice shall be included in all
+#  copies or substantial portions of the Software.
+#   
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#  SOFTWARE.
 
-if(EIGEN_INCLUDE_DIRS) # if compiling with PCL, it will bring Eigen with it
-	message(STATUS "SfMToyLib will use Eigen")
-	include_directories(${EIGEN_INCLUDE_DIRS})
-	add_definitions( -DUSE_EIGEN )
-endif()
+cmake_minimum_required(VERSION 3.2)
 
-set(SSBA_LIBRARY_DIR "${CMAKE_SOURCE_DIR}/3rdparty/SSBA-3.0/build" CACHE PATH "Directory to find SSBA libs")
-set(USE_SSBA OFF CACHE BOOL "Build using the SSBA-3.0 library?")
+####### SfM Library ########
 
-if(USE_SSBA)
-	link_directories(${SSBA_LIBRARY_DIR})
-	include_directories("${SSBA_LIBRARY_DIR}/../")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_SSBA")
-endif(USE_SSBA)
-
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
-set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
-
-# Core functions of SfM
-file(GLOB SFM_LIB_SOURCES	
-	Distance.* 
-	Triangulation.* 
-	FindCameraMatrices.*
-	MultiCameraDistance.*
-	IDistance.*
-	MultiCameraPnP.*
-	Common.*
-	IFeatureMatcher.*
-	RichFeatureMatcher.*
-	OFFeatureMatcher.*
-	BundleAdjuster.*
-	GPUSURFFeatureMatcher.*
-	AbstractFeatureMatcher.*
-	SfMUpdateListener.*
-)
+set(SFM_LIB_SOURCES SfMCommon.h                SfMCommon.cpp
+                    SfM.h                      SfM.cpp
+                    SfM2DFeatureUtilities.h    SfM2DFeatureUtilities.cpp
+                    SfMStereoUtilities.h       SfMStereoUtilities.cpp
+                    SfMBundleAdjustmentUtils.h SfMBundleAdjustmentUtils.cpp
+    )
 
 add_library(SfMToyLibrary ${SFM_LIB_SOURCES} )
-if(MSVC)
-	set_target_properties(SfMToyLibrary PROPERTIES COMPILE_FLAGS "/openmp")
-	if(USE_SSBA)
-		target_link_libraries(SfMToyLibrary V3D COLAMD )
-	endif(USE_SSBA)
-endif()
-if(UNIX)
-	if(USE_SSBA)
-		# default is to build SSBA as static libs...
-		target_link_libraries(SfMToyLibrary 
-			"${SSBA_LIBRARY_DIR}/libV3D.a" 
-			"${SSBA_LIBRARY_DIR}/libcolamd.a"
-			)
-	endif(USE_SSBA)
-endif()
+
+
+
+####### Unit Tests ########
+
+add_executable(SfMUnitTests SfMUnitTests.cpp)
+
+# setup Boost unit test framework
+target_include_directories(SfMUnitTests PRIVATE ${Boost_INCLUDE_DIRS})
+target_link_libraries(SfMUnitTests SfMToyLibrary ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${CERES_LIBRARIES} ${OpenCV_LIBS})
+
+enable_testing()
+
+add_test( NAME sfmtest COMMAND SfMUnitTests )
