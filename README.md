@@ -5,7 +5,9 @@ This is a reference implementation of a Structure-from-Motion pipeline in OpenCV
 *Note:* This is not a complete and robust SfM pipeline implementation. The purpose of this code is to serve as a tutorial and reference for OpenCV users and a soft intro to SfM in OpenCV. If you are looking for a more complete solution with many more options and parameters to tweak, check out the following:
 
  * OpenMVG http://openmvg.readthedocs.io/en/latest/#
- * libMV https://github.com/libmv/libmv
+ * libMV https://developer.blender.org/tag/libmv/
+ * VisualSFM http://ccwu.me/vsfm/
+ * Bundler http://www.cs.cornell.edu/~snavely/bundler/
 
 SfM-Toy-Library is now using OpenCV 3, which introduced many new convenience functions to Structure from Motion, the implementation is much cleaner and simpler. 
 
@@ -26,7 +28,7 @@ To compile use CMake: http://www.cmake.org
 
 #### On OSX Using XCode
 
-Get Boost and Ceres using homebrew: `brew install boost ceres-solver`
+Get Boost and Ceres using homebrew: `brew install boost ceres-solver` (you will need to tap `homebrew/science` for Ceres)
 
 	mkdir build
 	cd build
@@ -34,6 +36,8 @@ Get Boost and Ceres using homebrew: `brew install boost ceres-solver`
 	open SfMToyExample.xcodeproj
 	
 #### On Linux (or OSX) via a Makefile
+
+Obtain Boost (with e.g. `apt-get install libboost-all-dev`) and Ceres (probably need to clone and compile), or on OSX view homebrew as mentioned before.
 
 	mkdir build
 	cd build
@@ -45,10 +49,6 @@ Get Boost and Ceres using homebrew: `brew install boost ceres-solver`
 Use Cmake's GUI to create a MSVC solution, and build it.
 
 ## Usage
-
-See the blog posts:
-- http://www.morethantechnical.com/2012/02/07/structure-from-motion-and-3d-reconstruction-on-the-easy-in-opencv-2-3-w-code/
-- 
 
 ### Execute
 
@@ -67,10 +67,19 @@ Here's a place with some standard datasets for SfM: http://cvlab.epfl.ch/~strech
 
 Also, you can use the "Crazy Horse" (A national memorial site in South Dakota) dataset, that I pictured myself, included in the repo.
 
+### Other
+
+Some relevant blog posts from over the years:
+- http://www.morethantechnical.com/2013/11/04/moving-to-qt-on-the-sfm-toy-library-project/
+- http://www.morethantechnical.com/2012/08/09/checking-for-co-planarity-of-3d-points-in-opencv-wcode/
+- http://www.morethantechnical.com/2012/08/09/decomposing-the-essential-matrix-using-horn-and-eigen-wcode/
+- http://www.morethantechnical.com/2012/02/07/structure-from-motion-and-3d-reconstruction-on-the-easy-in-opencv-2-3-w-code/
+- http://www.morethantechnical.com/2012/01/04/simple-triangulation-with-opencv-from-harley-zisserman-w-code/
+
 ## References
 
 1. Multiple View Geometry in Computer Vision, Hartley, R. I. and Zisserman, A., 2004, Cambridge University Press [http://www.robots.ox.ac.uk/~vgg/hzbook/]
 2. Modeling the World from Internet Photo Collections, N. Snavely, S. M. Seitz, R. Szeliski, IJCV 2007 [http://phototour.cs.washington.edu/ModelingTheWorld_ijcv07.pdf]
-3. Triangulation, R.I. Hartley, P. Strum, 1997, Computer vision and image understanding
+3. Triangulation, R.I. Hartley, P. Strum, 1997, Computer vision and image understanding [http://perception.inrialpes.fr/Publications/1997/HS97/HartleySturm-cviu97.pdf]
 4. Recovering baseline and orientation from essential matrix, B.K.P. Horn, 1990, J. Optical Society of America [http://people.csail.mit.edu/bkph/articles/Essential_Old.pdf]
-
+5. On benchmarking camera calibration and multi-view stereo for high resolution imagery. Strecha, Christoph, et al. IEEE Computer Vision and Pattern Recognition (CVPR) 2008. [http://infoscience.epfl.ch/record/126393/files/strecha_cvpr_2008.pdf]
