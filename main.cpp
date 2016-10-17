@@ -41,11 +41,12 @@ int main(int argc, char** argv) {
     //add command line options
     po::options_description od;
     od.add_options()
-            ("help,h",                                                       "produce help message")
-            ("console-debug,d",   po::value<int>()->default_value(LOG_INFO), "Debug output to console log level (0 = Trace, 4 = Error).")
-            ("visual-debug,v",    po::value<int>()->default_value(LOG_WARN), "Visual debug output to screen log level (0 = All, 4 = None).")
-            ("downscale,s",       po::value<double>()->default_value(1.0),   "Downscale factor for input images")
-            ("input-directory,p", po::value<string>()->required(),           "Directory to find input images")
+            ("help,h",                                                          "Produce help message.")
+            ("console-debug,d",   po::value<int>()->default_value(LOG_INFO),    "Debug output to console log level (0 = Trace, 4 = Error).")
+            ("visual-debug,v",    po::value<int>()->default_value(LOG_WARN),    "Visual debug output to screen log level (0 = All, 4 = None).")
+            ("downscale,s",       po::value<double>()->default_value(1.0),      "Downscale factor for input images.")
+            ("input-directory,p", po::value<string>()->required(),              "Directory to find input images.")
+            ("output-prefix,o",   po::value<string>()->default_value("output"), "Prefix for output files.")
             ;
 
     po::positional_options_description op;
@@ -74,5 +75,5 @@ int main(int argc, char** argv) {
 	sfm.runSfM();
 
 	//save point cloud and cameras to file
-	sfm.saveCloudAndCamerasToPLY("output.ply");
+	sfm.saveCloudAndCamerasToPLY(varMap["output-prefix"].as<string>());
 }

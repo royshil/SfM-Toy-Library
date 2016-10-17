@@ -29,8 +29,9 @@ using namespace cv;
 
 namespace sfmtoylib {
 
-const float MERGE_CLOUD_POINT_MIN_MATCH_DISTANCE = 0.01;
+const float MERGE_CLOUD_POINT_MIN_MATCH_DISTANCE   = 0.01;
 const float MERGE_CLOUD_FEATURE_MIN_MATCH_DISTANCE = 20.0;
+const int   MIN_POINT_COUNT_FOR_HOMOGRAPHY         = 100;
 
 SfM::SfM(const float downscale) :
         mVisualDebugLevel(LOG_INFO),
@@ -67,8 +68,6 @@ ErrorCode SfM::runSfM() {
 
     //Lastly - add more camera views to the map
     addMoreViewsToReconstruction();
-
-    saveCloudAndCamerasToPLY("output.ply");
 
     if (mConsoleDebugLevel <= LOG_INFO) {
         cout << "----------------------- Done -----------------------" << endl;
@@ -320,21 +319,21 @@ map<float, ImagePair> SfM::sortViewsForBaseline() {
 
     //sort pairwise matches to find the lowest Homography inliers [Snavely07 4.2]
     map<float, ImagePair> matchesSizes;
-    size_t numImages = mImages.size();
-    for (size_t i = 0; i < numImages; i++) {
+    const size_t numImages = mImages.size();
+    for (size_t i = 0; i < numImages - 1; i++) {
         for (size_t j = i + 1; j < numImages; j++) {
-            if (mFeatureMatchMatrix[i][j].size() < 100) {
+            if (mFeatureMatchMatrix[i][j].size() < MIN_POINT_COUNT_FOR_HOMOGRAPHY) {
                 //Not enough points in matching
                 matchesSizes[1.0] = {i, j};
                 continue;
             }
 
             //Find number of homography inliers
-            int numInliers = SfMStereoUtilities::findHomographyInliers(
+            const int numInliers = SfMStereoUtilities::findHomographyInliers(
                     mImageFeatures[i],
                     mImageFeatures[j],
                     mFeatureMatchMatrix[i][j]);
-            float inliersRatio = (float)numInliers / (float)(mFeatureMatchMatrix[i][j].size());
+            const float inliersRatio = (float)numInliers / (float)(mFeatureMatchMatrix[i][j].size());
             matchesSizes[inliersRatio] = {i, j};
 
             if (mConsoleDebugLevel <= LOG_DEBUG) {
@@ -611,12 +610,12 @@ void SfM::mergeNewPointCloud(const PointCloud& cloud) {
     }
 }
 
-void SfM::saveCloudAndCamerasToPLY(const std::string& filename) {
+void SfM::saveCloudAndCamerasToPLY(const std::string& prefix) {
     if (mConsoleDebugLevel <= LOG_INFO) {
-        cout << "Saving result reconstruction to " << filename << endl;
+        cout << "Saving result reconstruction with prefix " << prefix << endl;
     }
 
-    ofstream ofs("points.ply");
+    ofstream ofs(prefix + "_points.ply");
 
     //write PLY header
     ofs << "ply                 " << endl <<
@@ -648,7 +647,7 @@ void SfM::saveCloudAndCamerasToPLY(const std::string& filename) {
 
     ofs.close();
 
-    ofstream ofsc("cameras.ply");
+    ofstream ofsc(prefix + "_cameras.ply");
 
     //write PLY header
     ofsc << "ply                 " << endl <<
