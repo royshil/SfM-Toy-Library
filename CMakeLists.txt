@@ -21,7 +21,7 @@
 #  SOFTWARE.
 
 project(SfMToyExample)
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.2)
 
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
@@ -30,10 +30,9 @@ find_package(Boost      REQUIRED COMPONENTS system chrono filesystem unit_test_f
 find_package(Ceres      REQUIRED)
 find_package(OpenGL)
 
-if (NOT APPLE)
-else() 
-    add_definitions("-std=gnu++11")
-endif()
+# enable C++11 standard
+set(CXX_STANDARD 11)
+set(CXX_STANDARD_REQUIRED ON)
 
 include_directories(${Boost_INCLUDE_DIR})
 link_directories   (${Boost_LIBRARY_DIR})
