@@ -21,7 +21,7 @@
 #  SOFTWARE.
 
 project(SfMToyExample)
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.2)
 
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
@@ -30,11 +30,9 @@ find_package(Boost      REQUIRED COMPONENTS system chrono filesystem unit_test_f
 find_package(Ceres      REQUIRED)
 find_package(OpenGL)
 
-if (NOT APPLE)
-    find_package(OpenMP)
-else() 
-    add_definitions("-std=gnu++11")
-endif()
+# enable C++11 standard
+set(CXX_STANDARD          11)
+set(CXX_STANDARD_REQUIRED ON)
 
 include_directories(${Boost_INCLUDE_DIR})
 link_directories   (${Boost_LIBRARY_DIR})
@@ -49,12 +47,6 @@ IF(APPLE)
 ENDIF(APPLE)
 
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
-
-if(OPENMP_FOUND)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -DHAVE_OPENMP")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DHAVE_OPENMP")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-endif()
 
 include_directories(SfMToyLib)
 

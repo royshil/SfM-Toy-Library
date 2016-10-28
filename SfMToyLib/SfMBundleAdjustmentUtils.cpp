@@ -30,6 +30,8 @@
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
 
+#include <mutex>
+
 using namespace cv;
 using namespace std;
 
