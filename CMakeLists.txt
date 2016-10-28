@@ -31,7 +31,7 @@ find_package(Ceres      REQUIRED)
 find_package(OpenGL)
 
 # enable C++11 standard
-set(CXX_STANDARD 11)
+set(CXX_STANDARD          11)
 set(CXX_STANDARD_REQUIRED ON)
 
 include_directories(${Boost_INCLUDE_DIR})
