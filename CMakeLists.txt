@@ -31,7 +31,6 @@ find_package(Ceres      REQUIRED)
 find_package(OpenGL)
 
 if (NOT APPLE)
-    find_package(OpenMP)
 else() 
     add_definitions("-std=gnu++11")
 endif()
@@ -49,12 +48,6 @@ IF(APPLE)
 ENDIF(APPLE)
 
 set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__SFM__DEBUG__" )
-
-if(OPENMP_FOUND)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -DHAVE_OPENMP")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DHAVE_OPENMP")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-endif()
 
 include_directories(SfMToyLib)
 
