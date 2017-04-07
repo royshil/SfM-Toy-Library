@@ -9,7 +9,7 @@ This is a reference implementation of a Structure-from-Motion pipeline in OpenCV
  * VisualSFM http://ccwu.me/vsfm/
  * Bundler http://www.cs.cornell.edu/~snavely/bundler/
 
-SfM-Toy-Library is now using OpenCV 3, which introduced many new convenience functions to Structure from Motion, the implementation is much cleaner and simpler. 
+SfM-Toy-Library is now using OpenCV 3, which introduced many new convenience functions to Structure from Motion (see my [blog post](http://www.morethantechnical.com/2016/10/17/structure-from-motion-toy-lib-upgrades-to-opencv-3/) for details), making the implementation much cleaner and simpler. 
 
 Ceres solver was chosen to do bundle adjustment, for its simple API, straightforward modeling of the problem and long-term support.
 
@@ -63,13 +63,15 @@ Use Cmake's GUI to create a MSVC solution, and build it.
 
 ### Datasets
 
-Here's a place with some standard datasets for SfM: http://cvlab.epfl.ch/~strecha/multiview/denseMVS.html
+Here's a place with some standard datasets for SfM: http://cvlabwww.epfl.ch/data/multiview/denseMVS.html
 
 Also, you can use the "Crazy Horse" (A national memorial site in South Dakota) dataset, that I pictured myself, included in the repo.
 
 ### Other
 
 Some relevant blog posts from over the years:
+- http://www.morethantechnical.com/2016/10/17/structure-from-motion-toy-lib-upgrades-to-opencv-3/
+- http://www.morethantechnical.com/2015/03/16/bootstrapping-planar-ar-tracking-without-markers-wcode/
 - http://www.morethantechnical.com/2013/11/04/moving-to-qt-on-the-sfm-toy-library-project/
 - http://www.morethantechnical.com/2012/08/09/checking-for-co-planarity-of-3d-points-in-opencv-wcode/
 - http://www.morethantechnical.com/2012/08/09/decomposing-the-essential-matrix-using-horn-and-eigen-wcode/
