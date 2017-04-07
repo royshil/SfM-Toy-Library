@@ -68,12 +68,12 @@ int main(int argc, char** argv) {
     }
 
 
-	SfM sfm(varMap["downscale"].as<double>());
-	sfm.setImagesDirectory(varMap["input-directory"].as<string>());
-	sfm.setConsoleDebugLevel(varMap["console-debug"].as<int>());
-	sfm.setVisualDebugLevel(varMap["visual-debug"].as<int>());
-	sfm.runSfM();
+    SfM sfm(varMap["downscale"].as<double>());
+    sfm.setImagesDirectory  (varMap["input-directory"].as<string>());
+    sfm.setConsoleDebugLevel(varMap["console-debug"]  .as<int>()   );
+    sfm.setVisualDebugLevel (varMap["visual-debug"]   .as<int>()   );
+    sfm.runSfM();
 
-	//save point cloud and cameras to file
-	sfm.saveCloudAndCamerasToPLY(varMap["output-prefix"].as<string>());
+    //save point cloud and cameras to file
+    sfm.saveCloudAndCamerasToPLY(varMap["output-prefix"].as<string>());
 }
